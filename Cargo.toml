@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uplc = { git = "ssh://git@github.com/aiken-lang/aiken.git" }
+uplc = { git = "https://github.com/aiken-lang/aiken.git" }
 num-bigint = "0.4"
