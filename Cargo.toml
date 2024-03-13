@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 uplc = { git = "ssh://git@github.com/aiken-lang/aiken.git" }
+num-bigint = "0.4"
