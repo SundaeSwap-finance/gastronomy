@@ -1,6 +1,7 @@
 use std::io::{self, stdout, Stdout};
 use std::panic;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use clap::{command, Parser, Subcommand};
 use crossterm::{execute, ExecutableCommand};
@@ -9,7 +10,8 @@ use pallas::ledger::primitives::babbage::Language;
 use ratatui::layout::Position as PositionLayout;
 use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
 use uplc::machine::cost_model::{CostModel, ExBudget};
-use uplc::machine::{Machine, MachineState};
+use uplc::machine::value::Value;
+use uplc::machine::{Context, Machine, MachineState};
 
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{
@@ -227,7 +229,7 @@ impl Widget for &mut App {
 
         Gauge::default()
             .gauge_style(Style::default().fg(Color::Green))
-            .label(format!("Step {}/{}", self.cursor, self.states.len()))
+            .label(format!("Step {}/{}", self.cursor, self.states.len() - 1))
             .ratio(self.cursor as f64 / self.states.len() as f64)
             .render(gauge_region, buf);
 
@@ -273,7 +275,14 @@ impl Widget for &mut App {
                 if self.cursor == 0 {
                     return;
                 }
-                let last_state = &self.states[self.cursor - 1];
+                let mut prev_idx = self.cursor - 1;
+                while prev_idx > 0 {
+                    if let MachineState::Compute(_, _, _) = &self.states[prev_idx].0 {
+                        break;
+                    }
+                    prev_idx -= 1;
+                }
+                let last_state = &self.states[prev_idx];
                 if let MachineState::Compute(context, env, _) = &last_state.0 {
                     ("Done", context, env, term, None)
                 } else {
@@ -340,13 +349,13 @@ impl Widget for &mut App {
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_set(top_right_border_set);
 
-        let context_text = format!("{:?}", context);
+        let context_text = context_to_string(context.clone());
         let max_context_scroll = context_text.split('\n').count() as u16 - 1;
         if self.context_scroll > max_context_scroll {
             self.context_scroll = max_context_scroll;
         }
 
-        Paragraph::new(format!("{:?}", context))
+        Paragraph::new(context_text)
             .block(context_block)
             .scroll((self.context_scroll, 0))
             .render(context_region, buf);
@@ -362,7 +371,7 @@ impl Widget for &mut App {
             .borders(Borders::ALL)
             .border_set(collapsed_top_and_left_border_set);
 
-        let env_text = env.iter().map(|v| uplc::machine::discharge::value_as_term(v.clone()).to_string()).collect::<Vec<String>>().join("\n");
+        let env_text = env_to_string(env);
         let max_env_scroll = env_text.split('\n').count() as u16 - 1;
         if self.env_scroll > max_env_scroll {
             self.env_scroll = max_env_scroll;
@@ -392,3 +401,58 @@ impl Widget for &mut App {
         }
     }
 }
+
+
+fn env_to_string(env: &Rc<Vec<Value>>) -> String {
+    let mut result = String::new();
+    for (idx, v) in env.iter().rev().enumerate() {
+        if idx > 0 {
+            result.push_str("\n");
+        }
+        result.push_str(format!("{}: {}", format!("i_{}", idx + 1).blue(), uplc::machine::discharge::value_as_term(v.clone())).as_str());
+    }
+    return result;
+}
+fn context_to_string(context: Context) -> String {
+    let mut result = String::new();
+    do_context_to_string(&context, &mut result);
+    return result;
+}
+
+fn do_context_to_string(context: &Context, so_far: &mut String) {
+    let next = match context {
+        Context::FrameAwaitArg(_, next) => {
+            so_far.push_str("Get Function Argument");
+            Some(next)
+        },
+        Context::FrameAwaitFunTerm(_, _, next) => {
+            so_far.push_str("Get Function");
+            Some(next)
+        },
+        Context::FrameAwaitFunValue(_, next) => {
+            so_far.push_str("Evaluate Function");
+            Some(next)
+        },
+        Context::FrameForce(next) => {
+            so_far.push_str("Force");
+            Some(next)
+        },
+        Context::FrameConstr(_, _, _, _, next) => {
+            so_far.push_str("Construct Data");
+            Some(next)
+        },
+        Context::FrameCases(_, _, next) => {
+            so_far.push_str("Match Cases");
+            Some(next)
+        },
+        Context::NoFrame => {
+            so_far.push_str("Root");
+            None
+        },
+    };
+    if let Some(next) = next {
+        so_far.push_str("\n -> ");
+        do_context_to_string(next, so_far);
+    }
+}
+
