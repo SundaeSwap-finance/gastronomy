@@ -3,8 +3,10 @@ use std::panic;
 use std::rc::Rc;
 
 use color_eyre::{config::HookBuilder, eyre};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
 use crossterm::{execute, ExecutableCommand};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::prelude::*;
 use uplc::machine::value::Value;
 use uplc::machine::Context;
@@ -42,7 +44,9 @@ pub fn init() -> io::Result<Tui> {
 pub fn restore() -> io::Result<()> {
     execute!(stdout(), LeaveAlternateScreen)?;
     disable_raw_mode()?;
-    stdout().execute(crossterm::event::EnableMouseCapture).unwrap();
+    stdout()
+        .execute(crossterm::event::EnableMouseCapture)
+        .unwrap();
     Ok(())
 }
 
@@ -52,7 +56,14 @@ pub fn env_to_string(env: &Rc<Vec<Value>>) -> String {
         if idx > 0 {
             result.push_str("\n");
         }
-        result.push_str(format!("{}: {}", format!("i_{}", idx + 1).blue(), uplc::machine::discharge::value_as_term(v.clone())).as_str());
+        result.push_str(
+            format!(
+                "{}: {}",
+                format!("i_{}", idx + 1).blue(),
+                uplc::machine::discharge::value_as_term(v.clone())
+            )
+            .as_str(),
+        );
     }
     return result;
 }
@@ -68,31 +79,31 @@ pub fn do_context_to_string(context: &Context, so_far: &mut String) {
         Context::FrameAwaitArg(_, next) => {
             so_far.push_str("Get Function Argument");
             Some(next)
-        },
+        }
         Context::FrameAwaitFunTerm(_, _, next) => {
             so_far.push_str("Get Function");
             Some(next)
-        },
+        }
         Context::FrameAwaitFunValue(_, next) => {
             so_far.push_str("Evaluate Function");
             Some(next)
-        },
+        }
         Context::FrameForce(next) => {
             so_far.push_str("Force");
             Some(next)
-        },
+        }
         Context::FrameConstr(_, _, _, _, next) => {
             so_far.push_str("Construct Data");
             Some(next)
-        },
+        }
         Context::FrameCases(_, _, next) => {
             so_far.push_str("Match Cases");
             Some(next)
-        },
+        }
         Context::NoFrame => {
             so_far.push_str("Root");
             None
-        },
+        }
     };
     if let Some(next) = next {
         so_far.push_str("\n -> ");

@@ -48,7 +48,14 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
             let mut terminal = utils::init()?;
-            let mut app = App { file_name: file, cursor: 0, states, exit: false, focus: "Term".into(), ..Default::default() };
+            let mut app = App {
+                file_name: file,
+                cursor: 0,
+                states,
+                exit: false,
+                focus: "Term".into(),
+                ..Default::default()
+            };
             let app_result = app.run(&mut terminal);
             utils::restore()?;
             Ok(app_result.unwrap()) // TODO

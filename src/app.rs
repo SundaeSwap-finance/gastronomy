@@ -24,7 +24,6 @@ pub struct App {
     pub return_scroll: u16,
 }
 
-
 impl App {
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut utils::Tui) -> io::Result<()> {
@@ -50,36 +49,34 @@ impl App {
                     }
                     KeyCode::Char('n') => {
                         let next = self.cursor + 1;
-                        self.cursor = if next < self.states.len() { next } else { self.states.len() - 1 };
+                        self.cursor = if next < self.states.len() {
+                            next
+                        } else {
+                            self.states.len() - 1
+                        };
                     }
                     KeyCode::Char('p') => {
                         let prev = if self.cursor > 0 { self.cursor - 1 } else { 0 };
                         self.cursor = prev;
                     }
-                    KeyCode::Tab => {
-                        match self.focus.as_str() {
-                            "Term" => self.focus = "Context".into(),
-                            "Context" => self.focus = "Env".into(),
-                            "Env" => self.focus = "Term".into(),
-                            _ => {},
-                        }
-                    }
-                    KeyCode::Up => {
-                        match self.focus.as_str() {
-                            "Term" => self.term_scroll = self.term_scroll.saturating_sub(1),
-                            "Context" => self.context_scroll = self.context_scroll.saturating_sub(1),
-                            "Env" => self.env_scroll = self.env_scroll.saturating_sub(1),
-                            _ => {}
-                        }
-                    }
-                    KeyCode::Down => {
-                        match self.focus.as_str() {
-                            "Term" => self.term_scroll = self.term_scroll.saturating_add(1),
-                            "Context" => self.context_scroll = self.context_scroll.saturating_add(1),
-                            "Env" => self.env_scroll = self.env_scroll.saturating_add(1),
-                            _ => {}
-                        }
-                    }
+                    KeyCode::Tab => match self.focus.as_str() {
+                        "Term" => self.focus = "Context".into(),
+                        "Context" => self.focus = "Env".into(),
+                        "Env" => self.focus = "Term".into(),
+                        _ => {}
+                    },
+                    KeyCode::Up => match self.focus.as_str() {
+                        "Term" => self.term_scroll = self.term_scroll.saturating_sub(1),
+                        "Context" => self.context_scroll = self.context_scroll.saturating_sub(1),
+                        "Env" => self.env_scroll = self.env_scroll.saturating_sub(1),
+                        _ => {}
+                    },
+                    KeyCode::Down => match self.focus.as_str() {
+                        "Term" => self.term_scroll = self.term_scroll.saturating_add(1),
+                        "Context" => self.context_scroll = self.context_scroll.saturating_add(1),
+                        "Env" => self.env_scroll = self.env_scroll.saturating_add(1),
+                        _ => {}
+                    },
                     _ => {}
                 }
             }
@@ -94,7 +91,7 @@ impl Widget for &mut App {
         let title = Title::from(vec![
             " Gastronomy Debugger (".bold(),
             self.file_name.to_str().unwrap().bold(),
-            ")".bold()
+            ")".bold(),
         ]);
         let instructions = Title::from(Line::from(vec![
             " Next ".into(),
@@ -104,7 +101,7 @@ impl Widget for &mut App {
             " Quit ".into(),
             "<Q> ".blue().bold(),
         ]));
-        
+
         let block = Block::default()
             .title(title.alignment(Alignment::Center))
             .title(
@@ -137,18 +134,12 @@ impl Widget for &mut App {
 
         let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(vec![
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ])
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(main_region);
         let term_region = layout[0];
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints(vec![
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ])
+            .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(layout[1]);
         let context_region = layout[0];
         let env_region = layout[1];
@@ -169,10 +160,8 @@ impl Widget for &mut App {
                 } else {
                     return;
                 }
-            },
-            MachineState::Compute(context, env, term) => {
-                ("Compute", context, env, term, None)
-            },
+            }
+            MachineState::Compute(context, env, term) => ("Compute", context, env, term, None),
             MachineState::Done(term) => {
                 if self.cursor == 0 {
                     return;
@@ -190,7 +179,7 @@ impl Widget for &mut App {
                 } else {
                     return;
                 }
-            },
+            }
         };
         let next = if self.cursor < self.states.len() - 1 {
             match &self.states[self.cursor + 1].0 {
@@ -202,33 +191,55 @@ impl Widget for &mut App {
             "None"
         };
 
-        let (cpu, mem) = (
-            10000000000 - curr_state.1.cpu,
-            14000000 - curr_state.1.mem,
-        );
+        let (cpu, mem) = (10000000000 - curr_state.1.cpu, 14000000 - curr_state.1.mem);
         let (prev_cpu, prev_mem) = if self.cursor > 0 {
             let prev_state = &self.states[self.cursor - 1];
-            (
-                10000000000 - prev_state.1.cpu,
-                14000000 - prev_state.1.mem,
-            )
+            (10000000000 - prev_state.1.cpu, 14000000 - prev_state.1.mem)
         } else {
             (0, 0)
         };
 
-        Line::from(vec!["Current: ".into(), label.fg(Color::Blue).add_modifier(Modifier::BOLD)]).left_aligned().render(command_region, buf);
+        Line::from(vec![
+            "Current: ".into(),
+            label.fg(Color::Blue).add_modifier(Modifier::BOLD),
+        ])
+        .left_aligned()
+        .render(command_region, buf);
         Line::from(vec![
             "Budget: ".into(),
-            format!("{} steps ", cpu).fg(Color::Blue).add_modifier(Modifier::BOLD),
-            if prev_cpu < cpu { format!("(+{}) ", cpu - prev_cpu).fg(Color::Green) } else { "".into() },
-            format!("{} mem ", mem).fg(Color::Blue).add_modifier(Modifier::BOLD),
-            if prev_mem < mem { format!("(+{}) ", mem - prev_mem).fg(Color::Green) } else { "".into() },
-        ]).centered().render(command_region, buf);
-        Line::from(vec!["Next: ".into(), next.fg(Color::Blue).add_modifier(Modifier::ITALIC)]).right_aligned().render(command_region, buf);
+            format!("{} steps ", cpu)
+                .fg(Color::Blue)
+                .add_modifier(Modifier::BOLD),
+            if prev_cpu < cpu {
+                format!("(+{}) ", cpu - prev_cpu).fg(Color::Green)
+            } else {
+                "".into()
+            },
+            format!("{} mem ", mem)
+                .fg(Color::Blue)
+                .add_modifier(Modifier::BOLD),
+            if prev_mem < mem {
+                format!("(+{}) ", mem - prev_mem).fg(Color::Green)
+            } else {
+                "".into()
+            },
+        ])
+        .centered()
+        .render(command_region, buf);
+        Line::from(vec![
+            "Next: ".into(),
+            next.fg(Color::Blue).add_modifier(Modifier::ITALIC),
+        ])
+        .right_aligned()
+        .render(command_region, buf);
 
         let term_block = Block::default()
-            .title(" Term ".fg(if self.focus == "Term" { Color::Blue } else { Color::Reset }))
-            .borders(Borders::TOP | Borders::LEFT | Borders:: BOTTOM)
+            .title(" Term ".fg(if self.focus == "Term" {
+                Color::Blue
+            } else {
+                Color::Reset
+            }))
+            .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
             .border_set(border::PLAIN);
 
         let term_text = term.to_string();
@@ -247,7 +258,11 @@ impl Widget for &mut App {
             ..symbols::border::PLAIN
         };
         let context_block = Block::default()
-            .title(" Context ".fg(if self.focus == "Context" { Color::Blue } else { Color::Reset }))
+            .title(" Context ".fg(if self.focus == "Context" {
+                Color::Blue
+            } else {
+                Color::Reset
+            }))
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_set(top_right_border_set);
 
@@ -269,7 +284,11 @@ impl Widget for &mut App {
             ..symbols::border::PLAIN
         };
         let env_block = Block::default()
-            .title(" Env ".fg(if self.focus == "Env" { Color::Blue } else { Color::Reset }))
+            .title(" Env ".fg(if self.focus == "Env" {
+                Color::Blue
+            } else {
+                Color::Reset
+            }))
             .borders(Borders::ALL)
             .border_set(collapsed_top_and_left_border_set);
 
@@ -303,6 +322,3 @@ impl Widget for &mut App {
         }
     }
 }
-
-
-
