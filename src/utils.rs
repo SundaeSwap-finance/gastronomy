@@ -3,10 +3,10 @@ use std::panic;
 use std::rc::Rc;
 
 use color_eyre::{config::HookBuilder, eyre};
+use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use crossterm::{execute, ExecutableCommand};
 use ratatui::prelude::*;
 use uplc::machine::value::Value;
 use uplc::machine::Context;
