@@ -44,9 +44,6 @@ pub fn init() -> io::Result<Tui> {
 pub fn restore() -> io::Result<()> {
     execute!(stdout(), LeaveAlternateScreen)?;
     disable_raw_mode()?;
-    stdout()
-        .execute(crossterm::event::EnableMouseCapture)
-        .unwrap();
     Ok(())
 }
 
