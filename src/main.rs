@@ -1,5 +1,6 @@
 mod app;
 mod utils;
+mod nuplc;
 
 use std::path::PathBuf;
 
