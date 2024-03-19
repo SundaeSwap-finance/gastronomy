@@ -1,6 +1,8 @@
 mod app;
 mod utils;
 
+use std::ffi::OsStr;
+use std::fs;
 use std::path::PathBuf;
 
 use app::App;
@@ -9,6 +11,7 @@ use pallas::ledger::primitives::babbage::Language;
 use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
+use uplc::parser;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -29,9 +32,17 @@ fn main() -> Result<(), anyhow::Error> {
 
     match args.command {
         Some(Commands::Run { file }) => {
-            let bytes = std::fs::read(file.clone())?;
             let program: Program<NamedDeBruijn> =
-                Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into();
+                if file.extension().and_then(OsStr::to_str) == Some("uplc") {
+                    let code = fs::read_to_string(file.clone())?;
+                    parser::program(&code).unwrap().try_into()?
+                } else if file.extension().and_then(OsStr::to_str) == Some("flat") {
+                    let bytes = std::fs::read(file.clone())?;
+                    Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into()
+                } else {
+                    println!("That file extension is not supported.");
+                    return Ok(());
+                };
             let mut machine = Machine::new(
                 Language::PlutusV2,
                 CostModel::default(),
