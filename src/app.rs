@@ -91,41 +91,8 @@ impl App {
 
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Title::from(vec![
-            " Gastronomy Debugger (".bold(),
-            self.file_name.to_str().unwrap().bold(),
-            ")".bold(),
-        ]);
-        let instructions = Title::from(Line::from(vec![
-            " Next ".into(),
-            "<N>".blue().bold(),
-            " Previous ".into(),
-            "<P>".blue().bold(),
-            " Quit ".into(),
-            "<Q> ".blue().bold(),
-        ]));
+        let layout = init(self.file_name.clone(), area, buf);
 
-        let block = Block::default()
-            .title(title.alignment(Alignment::Center))
-            .title(
-                instructions
-                    .alignment(Alignment::Center)
-                    .position(Position::Bottom),
-            )
-            .borders(Borders::ALL)
-            .border_set(border::THICK);
-
-        let layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(vec![
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Percentage(100),
-            ])
-            .split(block.inner(area));
-
-        block.render(area, buf);
-        
         let gauge_region = layout[0];
         let command_region = layout[1];
         let main_region = layout[2];
@@ -217,6 +184,44 @@ impl Widget for &mut App {
 
         render_clear_popup_region(area, ret_value, buf);
     }
+}
+
+fn init(file_name: PathBuf, area: Rect, buf: &mut Buffer) -> Rc<[Rect]> {
+    let title = Title::from(vec![
+        " Gastronomy Debugger (".bold(),
+        file_name.to_str().unwrap().bold(),
+        ")".bold(),
+    ]);
+    let instructions = Title::from(Line::from(vec![
+        " Next ".into(),
+        "<N>".blue().bold(),
+        " Previous ".into(),
+        "<P>".blue().bold(),
+        " Quit ".into(),
+        "<Q> ".blue().bold(),
+    ]));
+
+    let block = Block::default()
+        .title(title.alignment(Alignment::Center))
+        .title(
+            instructions
+                .alignment(Alignment::Center)
+                .position(Position::Bottom),
+        )
+        .borders(Borders::ALL)
+        .border_set(border::THICK);
+
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Percentage(100),
+        ])
+        .split(block.inner(area));
+
+    block.render(area, buf);
+    return layout;
 }
 
 fn render_gauge_region(
