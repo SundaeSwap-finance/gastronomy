@@ -91,7 +91,7 @@ impl App {
 
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let layout = init(self.file_name.clone(), area, buf);
+        let layout = render_block_region(self.file_name.clone(), area, buf);
 
         let gauge_region = layout[0];
         let command_region = layout[1];
@@ -186,7 +186,7 @@ impl Widget for &mut App {
     }
 }
 
-fn init(file_name: PathBuf, area: Rect, buf: &mut Buffer) -> Rc<[Rect]> {
+fn render_block_region(file_name: PathBuf, area: Rect, buf: &mut Buffer) -> Rc<[Rect]> {
     let title = Title::from(vec![
         " Gastronomy Debugger (".bold(),
         file_name.to_str().unwrap().bold(),
