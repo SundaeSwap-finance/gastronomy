@@ -169,9 +169,7 @@ impl Widget for &mut App {
             command_region,
             label,
         );
-
         render_term_region(self.focus.clone(), term, self.term_scroll, term_region, buf);
-
         render_context_region(
             self.focus.clone(),
             context,
@@ -179,9 +177,7 @@ impl Widget for &mut App {
             self.context_scroll,
             buf,
         );
-
         render_env_region(env, self.focus.clone(), self.env_scroll, env_region, buf);
-
         render_clear_popup_region(area, ret_value, buf);
     }
 }

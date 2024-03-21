@@ -22,7 +22,10 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    Run { file: PathBuf },
+    Run {
+        file: PathBuf,
+        input: Option<String>,
+    },
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -31,7 +34,7 @@ fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
 
     match args.command {
-        Some(Commands::Run { file }) => {
+        Some(Commands::Run { file, .. }) => {
             let program: Program<NamedDeBruijn> =
                 if file.extension().and_then(OsStr::to_str) == Some("uplc") {
                     let code = fs::read_to_string(file.clone())?;
