@@ -638,6 +638,7 @@ dependencies = [
  "clap",
  "color-eyre",
  "crossterm",
+ "hex",
  "num-bigint",
  "pallas",
  "ratatui",
