@@ -51,12 +51,12 @@ fn main() -> Result<(), anyhow::Error> {
 
             for param in parameters {
                 let data: PlutusData = {
-                    let bytes = hex::decode(p)
+                    let bytes = hex::decode(param)
                         .map_err::<Error, _>(|e| {
                             Error::message(format!("Invalid hex-encoded string: {e}")).into()
                         })
-                        .unwrap_or_else(|_e| {
-                            println!("{}", _e);
+                        .unwrap_or_else(|e| {
+                            println!("{}", e);
                             process::exit(1)
                         });
 
@@ -64,8 +64,8 @@ fn main() -> Result<(), anyhow::Error> {
                         .map_err::<Error, _>(|e| {
                             Error::message(format!("Invalid hex-encoded string: {e}")).into()
                         })
-                        .unwrap_or_else(|_e| {
-                            println!("{}", _e);
+                        .unwrap_or_else(|e| {
+                            println!("{}", e);
                             process::exit(1)
                         })
                 };
