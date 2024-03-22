@@ -50,30 +50,28 @@ fn main() -> Result<(), anyhow::Error> {
                 };
 
             for param in parameters {
-                let data: PlutusData = match &param {
-                    p => {
-                        let bytes = hex::decode(p)
-                            .map_err::<Error, _>(|e| {
-                                Error::message(format!("Invalid hex-encoded string: {e}")).into()
-                            })
-                            .unwrap_or_else(|_e| {
-                                println!("{}", _e);
-                                process::exit(1)
-                            });
+                let data: PlutusData = {
+                    let bytes = hex::decode(p)
+                        .map_err::<Error, _>(|e| {
+                            Error::message(format!("Invalid hex-encoded string: {e}")).into()
+                        })
+                        .unwrap_or_else(|_e| {
+                            println!("{}", _e);
+                            process::exit(1)
+                        });
 
-                        uplc::plutus_data(&bytes)
-                            .map_err::<Error, _>(|e| {
-                                Error::message(format!("Invalid hex-encoded string: {e}")).into()
-                            })
-                            .unwrap_or_else(|_e| {
-                                println!("{}", _e);
-                                process::exit(1)
-                            })
-                    }
-                    _ => continue,
+                    uplc::plutus_data(&bytes)
+                        .map_err::<Error, _>(|e| {
+                            Error::message(format!("Invalid hex-encoded string: {e}")).into()
+                        })
+                        .unwrap_or_else(|_e| {
+                            println!("{}", _e);
+                            process::exit(1)
+                        })
                 };
                 program = program.apply_data(data);
             }
+
             let mut machine = Machine::new(
                 Language::PlutusV2,
                 CostModel::default(),
