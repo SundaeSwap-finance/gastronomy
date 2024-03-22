@@ -5,10 +5,9 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::{fs, process};
 
-use aiken_project::blueprint;
-use aiken_project::error::Error;
 use app::App;
 use clap::{command, Parser, Subcommand};
+use pallas::codec::minicbor::decode::Error;
 use pallas::ledger::primitives::babbage::Language;
 
 use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
@@ -55,29 +54,19 @@ fn main() -> Result<(), anyhow::Error> {
                     p => {
                         let bytes = hex::decode(p)
                             .map_err::<Error, _>(|e| {
-                                blueprint::error::Error::MalformedParameter {
-                                    hint: format!("Invalid hex-encoded string: {e}"),
-                                }
-                                .into()
+                                Error::message(format!("Invalid hex-encoded string: {e}")).into()
                             })
-                            .unwrap_or_else(|e| {
-                                println!();
-                                e.report();
+                            .unwrap_or_else(|_e| {
+                                println!("{}", _e);
                                 process::exit(1)
                             });
 
                         uplc::plutus_data(&bytes)
                             .map_err::<Error, _>(|e| {
-                                blueprint::error::Error::MalformedParameter {
-                                    hint: format!(
-                                        "Invalid Plutus data; malformed CBOR encoding: {e}"
-                                    ),
-                                }
-                                .into()
+                                Error::message(format!("Invalid hex-encoded string: {e}")).into()
                             })
-                            .unwrap_or_else(|e| {
-                                println!();
-                                e.report();
+                            .unwrap_or_else(|_e| {
+                                println!("{}", _e);
                                 process::exit(1)
                             })
                     }

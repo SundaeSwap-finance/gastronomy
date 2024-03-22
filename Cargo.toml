@@ -17,4 +17,3 @@ crossterm = "0.27.0"
 color-eyre = "0.6.3"
 # pretty = "0.12.3"
 hex = "0.4.3"
-aiken-project = { path= "../aiken/crates/aiken-project" }
