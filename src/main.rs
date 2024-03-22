@@ -2,16 +2,19 @@ mod app;
 mod utils;
 
 use std::ffi::OsStr;
-use std::fs;
 use std::path::PathBuf;
+use std::{fs, process};
 
+use aiken_project::blueprint;
+use aiken_project::error::Error;
 use app::App;
 use clap::{command, Parser, Subcommand};
 use pallas::ledger::primitives::babbage::Language;
+
 use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
-use uplc::parser;
+use uplc::{parser, PlutusData};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -24,7 +27,7 @@ struct Args {
 enum Commands {
     Run {
         file: PathBuf,
-        input: Option<String>,
+        parameters: Vec<String>,
     },
 }
 
@@ -34,8 +37,8 @@ fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
 
     match args.command {
-        Some(Commands::Run { file, .. }) => {
-            let program: Program<NamedDeBruijn> =
+        Some(Commands::Run { file, parameters }) => {
+            let mut program: Program<NamedDeBruijn> =
                 if file.extension().and_then(OsStr::to_str) == Some("uplc") {
                     let code = fs::read_to_string(file.clone())?;
                     parser::program(&code).unwrap().try_into()?
@@ -46,6 +49,42 @@ fn main() -> Result<(), anyhow::Error> {
                     println!("That file extension is not supported.");
                     return Ok(());
                 };
+
+            for param in parameters {
+                let data: PlutusData = match &param {
+                    p => {
+                        let bytes = hex::decode(p)
+                            .map_err::<Error, _>(|e| {
+                                blueprint::error::Error::MalformedParameter {
+                                    hint: format!("Invalid hex-encoded string: {e}"),
+                                }
+                                .into()
+                            })
+                            .unwrap_or_else(|e| {
+                                println!();
+                                e.report();
+                                process::exit(1)
+                            });
+
+                        uplc::plutus_data(&bytes)
+                            .map_err::<Error, _>(|e| {
+                                blueprint::error::Error::MalformedParameter {
+                                    hint: format!(
+                                        "Invalid Plutus data; malformed CBOR encoding: {e}"
+                                    ),
+                                }
+                                .into()
+                            })
+                            .unwrap_or_else(|e| {
+                                println!();
+                                e.report();
+                                process::exit(1)
+                            })
+                    }
+                    _ => continue,
+                };
+                program = program.apply_data(data);
+            }
             let mut machine = Machine::new(
                 Language::PlutusV2,
                 CostModel::default(),
