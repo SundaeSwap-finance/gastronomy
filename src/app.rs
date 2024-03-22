@@ -79,7 +79,7 @@ impl App {
                         "Context" => self.context_scroll = self.context_scroll.saturating_add(1),
                         "Env" => self.env_scroll = self.env_scroll.saturating_add(1),
                         _ => {}
-                    },
+                    }
                     _ => {}
                 }
             }
