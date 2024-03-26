@@ -62,7 +62,10 @@ fn main() -> Result<(), anyhow::Error> {
 
                     uplc::plutus_data(&bytes)
                         .map_err::<Error, _>(|e| {
-                            Error::message(format!("Invalid Plutus data; malformed CBOR encoding: {e}")).into()
+                            Error::message(format!(
+                                "Invalid Plutus data; malformed CBOR encoding: {e}"
+                            ))
+                            .into()
                         })
                         .unwrap_or_else(|e| {
                             println!("{}", e);
