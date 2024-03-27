@@ -5,7 +5,6 @@ use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::{fs, process};
 
-use anyhow::Ok;
 use app::App;
 use clap::{command, Parser, Subcommand};
 use pallas::codec::minicbor::decode::Error;
