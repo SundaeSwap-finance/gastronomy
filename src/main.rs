@@ -10,9 +10,10 @@ use clap::{command, Parser, Subcommand};
 use pallas::codec::minicbor::decode::Error;
 use pallas::ledger::primitives::babbage::Language;
 
-use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
+use uplc::ast::{FakeNamedDeBruijn, Name, NamedDeBruijn, Program, Term};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
+use uplc::optimize;
 use uplc::{parser, PlutusData};
 
 #[derive(Parser, Debug)]
@@ -74,6 +75,39 @@ fn main() -> Result<(), anyhow::Error> {
                 };
                 program = program.apply_data(data);
             }
+
+            let program: Program<Name> = Program::<Name>::try_from(program)?.try_into()?;
+
+            let program = program
+                .clone()
+                .traverse_uplc_with(&mut |_, term, _, _| match term {
+                    Term::Var(_) => {
+                        let term = Term::Var(
+                            Name {
+                                text: "the champ is here".to_string(),
+                                unique: 0.into(),
+                            }
+                            .into(),
+                        );
+                        program.apply_term(&term);
+                        println!("Var - {}", term);
+                    }
+                    Term::Delay(_) => println!("Delay - {}", term),
+                    Term::Lambda {
+                        parameter_name,
+                        body,
+                    } => println!("Lambda - {}", term),
+                    Term::Apply { function, argument } => println!("Apply - {}", term),
+                    Term::Constant(_) => println!("Constant - {}", term),
+                    Term::Force(_) => println!("Force - {}", term),
+                    Term::Error => println!("Error - {}", term),
+                    Term::Builtin(_) => println!("Builtin - {}", term),
+                    Term::Constr { tag, fields } => println!("Contr - {}", term),
+                    Term::Case { constr, branches } => println!("Case - {}", term),
+                });
+
+            let program: Program<NamedDeBruijn> =
+                Program::<NamedDeBruijn>::try_from(program)?.try_into()?;
 
             let mut machine = Machine::new(
                 Language::PlutusV2,

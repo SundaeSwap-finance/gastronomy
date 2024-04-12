@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uplc = { git="https://github.com/SundaeSwap-finance/aiken.git", rev = "68965b52" }
+uplc = { git="https://github.com/SundaeSwap-finance/aiken.git", rev = "6ba2241" }
 # uplc = { path = "../aiken/crates/uplc" }
 num-bigint = "0.4"
 clap = { version = "4.5.3", features = ["derive"] }
