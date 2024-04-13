@@ -1,8 +1,10 @@
 mod app;
 mod utils;
 
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::{fs, process};
 
 use app::App;
@@ -10,10 +12,9 @@ use clap::{command, Parser, Subcommand};
 use pallas::codec::minicbor::decode::Error;
 use pallas::ledger::primitives::babbage::Language;
 
-use uplc::ast::{FakeNamedDeBruijn, Name, NamedDeBruijn, Program, Term};
+use uplc::ast::{FakeNamedDeBruijn, Name, NamedDeBruijn, Program, Term, Unique};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
-use uplc::optimize;
 use uplc::{parser, PlutusData};
 
 #[derive(Parser, Debug)]
@@ -78,30 +79,30 @@ fn main() -> Result<(), anyhow::Error> {
 
             let program: Program<Name> = Program::<Name>::try_from(program)?.try_into()?;
 
+            let mut terms_to_readable_names: HashMap<Unique, String> = HashMap::new();
+
             let program = program
                 .clone()
                 .traverse_uplc_with(&mut |_, term, _, _| match term {
-                    Term::Var(_) => {
-                        let term = Term::Var(
-                            Name {
-                                text: "the champ is here".to_string(),
-                                unique: 0.into(),
-                            }
-                            .into(),
-                        );
-                        program.apply_term(&term);
-                        println!("Var - {}", term);
+                    Term::Var(name) => {
+                        *term = update_terms(name, &mut terms_to_readable_names);
+                        println!("{:?}", terms_to_readable_names);
                     }
-                    Term::Delay(_) => println!("Delay - {}", term),
+                    Term::Delay(name) => println!("Delay - {}", term),
                     Term::Lambda {
                         parameter_name,
                         body,
-                    } => println!("Lambda - {}", term),
+                    } => {
+                        println!("paramter_name - {:?}", parameter_name);
+                        println!("body - {:?}", body);
+                        *term = update_terms(parameter_name, &mut terms_to_readable_names);
+                        println!("{:?}", terms_to_readable_names);
+                    }
                     Term::Apply { function, argument } => println!("Apply - {}", term),
-                    Term::Constant(_) => println!("Constant - {}", term),
-                    Term::Force(_) => println!("Force - {}", term),
-                    Term::Error => println!("Error - {}", term),
-                    Term::Builtin(_) => println!("Builtin - {}", term),
+                    Term::Constant(name) => println!("Constant - {}", term),
+                    Term::Force(name) => println!("Force - {}", term),
+                    Term::Error => println!("Error"),
+                    Term::Builtin(name) => println!("Builtin - {}", term),
                     Term::Constr { tag, fields } => println!("Contr - {}", term),
                     Term::Case { constr, branches } => println!("Case - {}", term),
                 });
@@ -142,4 +143,22 @@ fn main() -> Result<(), anyhow::Error> {
             Ok(())
         }
     }
+}
+
+fn update_terms(
+    name: &mut Rc<Name>,
+    terms_to_readable_names: &mut HashMap<Unique, String>,
+) -> Term<Name> {
+    let name = Rc::make_mut(name);
+    let text = terms_to_readable_names
+        .entry(name.unique)
+        .or_insert(name.text.clone() + "-" + &name.unique.to_string())
+        .to_string();
+    Term::Var(
+        Name {
+            text: text,
+            unique: name.unique,
+        }
+        .into(),
+    )
 }
