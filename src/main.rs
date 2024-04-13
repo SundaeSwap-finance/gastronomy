@@ -15,6 +15,7 @@ use pallas::ledger::primitives::babbage::Language;
 use uplc::ast::{FakeNamedDeBruijn, Name, NamedDeBruijn, Program, Term, Unique};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
+use uplc::parser::term;
 use uplc::{parser, PlutusData};
 
 #[derive(Parser, Debug)]
@@ -81,22 +82,39 @@ fn main() -> Result<(), anyhow::Error> {
 
             let mut terms_to_readable_names: HashMap<Unique, String> = HashMap::new();
 
+            println!("{:?}", program);
+
             let program = program
                 .clone()
                 .traverse_uplc_with(&mut |_, term, _, _| match term {
                     Term::Var(name) => {
-                        *term = update_terms(name, &mut terms_to_readable_names);
-                        println!("{:?}", terms_to_readable_names);
+                        let name = Rc::make_mut(name);
+                        let text = terms_to_readable_names
+                            .entry(name.unique)
+                            .or_insert(name.text.clone() + "-" + &name.unique.to_string())
+                            .to_string();
+                        *term = Term::Var(
+                            Name {
+                                text,
+                                unique: name.unique,
+                            }
+                            .into(),
+                        )
                     }
                     Term::Delay(name) => println!("Delay - {}", term),
                     Term::Lambda {
                         parameter_name,
                         body,
                     } => {
-                        println!("paramter_name - {:?}", parameter_name);
-                        println!("body - {:?}", body);
-                        *term = update_terms(parameter_name, &mut terms_to_readable_names);
-                        println!("{:?}", terms_to_readable_names);
+                        let name = Rc::make_mut(parameter_name);
+                        let text = terms_to_readable_names
+                            .entry(name.unique)
+                            .or_insert(name.text.clone() + "-" + &name.unique.to_string())
+                            .to_string();
+                        *term = Term::Lambda {
+                            parameter_name: Name::text(text).into(),
+                            body: Rc::new(body.as_ref().clone()),
+                        }
                     }
                     Term::Apply { function, argument } => println!("Apply - {}", term),
                     Term::Constant(name) => println!("Constant - {}", term),
@@ -107,6 +125,8 @@ fn main() -> Result<(), anyhow::Error> {
                     Term::Case { constr, branches } => println!("Case - {}", term),
                 });
 
+            println!("{:?}", terms_to_readable_names);
+            println!("{:?}", program);
             let program: Program<NamedDeBruijn> =
                 Program::<NamedDeBruijn>::try_from(program)?.try_into()?;
 
@@ -143,22 +163,4 @@ fn main() -> Result<(), anyhow::Error> {
             Ok(())
         }
     }
-}
-
-fn update_terms(
-    name: &mut Rc<Name>,
-    terms_to_readable_names: &mut HashMap<Unique, String>,
-) -> Term<Name> {
-    let name = Rc::make_mut(name);
-    let text = terms_to_readable_names
-        .entry(name.unique)
-        .or_insert(name.text.clone() + "-" + &name.unique.to_string())
-        .to_string();
-    Term::Var(
-        Name {
-            text: text,
-            unique: name.unique,
-        }
-        .into(),
-    )
 }
