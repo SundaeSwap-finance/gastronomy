@@ -82,8 +82,6 @@ fn main() -> Result<(), anyhow::Error> {
 
             let mut terms_to_readable_names: HashMap<Unique, String> = HashMap::new();
 
-            println!("{:?}", program);
-
             let program = program
                 .clone()
                 .traverse_uplc_with(&mut |_, term, _, _| match term {
@@ -101,7 +99,9 @@ fn main() -> Result<(), anyhow::Error> {
                             .into(),
                         )
                     }
-                    Term::Delay(name) => println!("Delay - {}", term),
+                    Term::Delay(name) => {
+                        println!("Delay name - {}", name);
+                    }
                     Term::Lambda {
                         parameter_name,
                         body,
@@ -116,17 +116,32 @@ fn main() -> Result<(), anyhow::Error> {
                             body: Rc::new(body.as_ref().clone()),
                         }
                     }
-                    Term::Apply { function, argument } => println!("Apply - {}", term),
-                    Term::Constant(name) => println!("Constant - {}", term),
-                    Term::Force(name) => println!("Force - {}", term),
-                    Term::Error => println!("Error"),
-                    Term::Builtin(name) => println!("Builtin - {}", term),
-                    Term::Constr { tag, fields } => println!("Contr - {}", term),
-                    Term::Case { constr, branches } => println!("Case - {}", term),
+                    Term::Apply { function, argument } => {
+                        println!("Apply function - {}", function);
+                        println!("Apply argument - {}", argument);
+                    }
+                    Term::Constant(name) => {
+                        println!("Constant name - {:?}", name);
+                    }
+                    Term::Force(name) => {
+                        println!("Force name - {:?}", name);
+                    }
+                    Term::Error => {
+                        println!("Error");
+                    }
+                    Term::Builtin(name) => {
+                        println!("Builtin name - {}", name);
+                    }
+                    Term::Constr { tag, fields } => {
+                        println!("Contr tag - {}", tag);
+                        println!("Contr fields - {:?}", fields);
+                    }
+                    Term::Case { constr, branches } => {
+                        println!("Case constr - {}", constr);
+                        println!("Case branches - {:?}", branches);
+                    }
                 });
 
-            println!("{:?}", terms_to_readable_names);
-            println!("{:?}", program);
             let program: Program<NamedDeBruijn> =
                 Program::<NamedDeBruijn>::try_from(program)?.try_into()?;
 
