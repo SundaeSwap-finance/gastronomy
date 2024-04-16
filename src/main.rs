@@ -15,7 +15,6 @@ use pallas::ledger::primitives::babbage::Language;
 use uplc::ast::{FakeNamedDeBruijn, Name, NamedDeBruijn, Program, Term, Unique};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
-use uplc::parser::term;
 use uplc::{parser, PlutusData};
 
 #[derive(Parser, Debug)]
@@ -99,9 +98,6 @@ fn main() -> Result<(), anyhow::Error> {
                             .into(),
                         )
                     }
-                    Term::Delay(name) => {
-                        println!("Delay name - {}", name);
-                    }
                     Term::Lambda {
                         parameter_name,
                         body,
@@ -112,34 +108,15 @@ fn main() -> Result<(), anyhow::Error> {
                             .or_insert(name.text.clone() + "-" + &name.unique.to_string())
                             .to_string();
                         *term = Term::Lambda {
-                            parameter_name: Name::text(text).into(),
+                            parameter_name: Name {
+                                text: text,
+                                unique: name.unique,
+                            }
+                            .into(),
                             body: Rc::new(body.as_ref().clone()),
-                        }
+                        };
                     }
-                    Term::Apply { function, argument } => {
-                        println!("Apply function - {}", function);
-                        println!("Apply argument - {}", argument);
-                    }
-                    Term::Constant(name) => {
-                        println!("Constant name - {:?}", name);
-                    }
-                    Term::Force(name) => {
-                        println!("Force name - {:?}", name);
-                    }
-                    Term::Error => {
-                        println!("Error");
-                    }
-                    Term::Builtin(name) => {
-                        println!("Builtin name - {}", name);
-                    }
-                    Term::Constr { tag, fields } => {
-                        println!("Contr tag - {}", tag);
-                        println!("Contr fields - {:?}", fields);
-                    }
-                    Term::Case { constr, branches } => {
-                        println!("Case constr - {}", constr);
-                        println!("Case branches - {:?}", branches);
-                    }
+                    _ => {}
                 });
 
             let program: Program<NamedDeBruijn> =
