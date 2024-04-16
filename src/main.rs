@@ -1,8 +1,10 @@
 mod app;
 mod utils;
 
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::{fs, process};
 
 use app::App;
@@ -10,7 +12,7 @@ use clap::{command, Parser, Subcommand};
 use pallas::codec::minicbor::decode::Error;
 use pallas::ledger::primitives::babbage::Language;
 
-use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
+use uplc::ast::{FakeNamedDeBruijn, Name, NamedDeBruijn, Program, Term, Unique};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
 use uplc::{parser, PlutusData};
@@ -74,6 +76,51 @@ fn main() -> Result<(), anyhow::Error> {
                 };
                 program = program.apply_data(data);
             }
+
+            let program: Program<Name> = Program::<Name>::try_from(program)?.try_into()?;
+
+            let mut terms_to_readable_names: HashMap<Unique, String> = HashMap::new();
+
+            let program = program
+                .clone()
+                .traverse_uplc_with(&mut |_, term, _, _| match term {
+                    Term::Var(name) => {
+                        let name = Rc::make_mut(name);
+                        let text = terms_to_readable_names
+                            .entry(name.unique)
+                            .or_insert(name.text.clone() + "-" + &name.unique.to_string())
+                            .to_string();
+                        *term = Term::Var(
+                            Name {
+                                text,
+                                unique: name.unique,
+                            }
+                            .into(),
+                        )
+                    }
+                    Term::Lambda {
+                        parameter_name,
+                        body,
+                    } => {
+                        let name = Rc::make_mut(parameter_name);
+                        let text = terms_to_readable_names
+                            .entry(name.unique)
+                            .or_insert(name.text.clone() + "-" + &name.unique.to_string())
+                            .to_string();
+                        *term = Term::Lambda {
+                            parameter_name: Name {
+                                text: text,
+                                unique: name.unique,
+                            }
+                            .into(),
+                            body: Rc::new(body.as_ref().clone()),
+                        };
+                    }
+                    _ => {}
+                });
+
+            let program: Program<NamedDeBruijn> =
+                Program::<NamedDeBruijn>::try_from(program)?.try_into()?;
 
             let mut machine = Machine::new(
                 Language::PlutusV2,
