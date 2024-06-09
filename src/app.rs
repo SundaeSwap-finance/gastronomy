@@ -149,26 +149,7 @@ impl Widget for &mut App {
             }
         };
 
-        let next = get_next(self.cursor, &self.states);
-
-        let (cpu, mem) = (10000000000 - curr_state.1.cpu, 14000000 - curr_state.1.mem);
-        let (prev_cpu, prev_mem) = if self.cursor > 0 {
-            let prev_state = &self.states[self.cursor - 1];
-            (10000000000 - prev_state.1.cpu, 14000000 - prev_state.1.mem)
-        } else {
-            (0, 0)
-        };
-
-        render_command_region(
-            cpu,
-            mem,
-            prev_cpu,
-            prev_mem,
-            buf,
-            next,
-            command_region,
-            label,
-        );
+        render_command_region(label, self.cursor, &self.states, command_region, buf);
         render_term_region(self.focus.clone(), term, self.term_scroll, term_region, buf);
         render_context_region(
             self.focus.clone(),
@@ -217,12 +198,12 @@ fn render_block_region(file_name: PathBuf, area: Rect, buf: &mut Buffer) -> Rc<[
         .split(block.inner(area));
 
     block.render(area, buf);
-    return layout;
+    layout
 }
 
 fn render_gauge_region(
     cursor: usize,
-    states: &Vec<(MachineState, ExBudget)>,
+    states: &[(MachineState, ExBudget)],
     gauge_region: Rect,
     buf: &mut Buffer,
 ) {
@@ -233,28 +214,41 @@ fn render_gauge_region(
         .render(gauge_region, buf);
 }
 
-fn get_next(cursor: usize, states: &Vec<(MachineState, ExBudget)>) -> &str {
+fn get_next(cursor: usize, states: &[(MachineState, ExBudget)]) -> &str {
     if cursor < states.len() - 1 {
         match &states[cursor + 1].0 {
-            MachineState::Compute(_, _, _) => return "Compute",
-            MachineState::Return(_, _) => return "Return",
-            MachineState::Done(_) => return "Done",
+            MachineState::Compute(_, _, _) => "Compute",
+            MachineState::Return(_, _) => "Return",
+            MachineState::Done(_) => "Done",
         }
     } else {
-        return "None";
-    };
+        "None"
+    }
 }
 
+const MAX_CPU: i64 = 10000000000;
+const MAX_MEM: i64 = 14000000;
+
 fn render_command_region(
-    cpu: i64,
-    mem: i64,
-    prev_cpu: i64,
-    prev_mem: i64,
-    buf: &mut Buffer,
-    next: &str,
-    command_region: Rect,
     label: &str,
+    cursor: usize,
+    states: &[(MachineState, ExBudget)],
+    command_region: Rect,
+    buf: &mut Buffer,
 ) {
+    let next = get_next(cursor, states);
+
+    let (cpu, mem) = {
+        let curr_budget = states[cursor].1;
+        (MAX_CPU - curr_budget.cpu, MAX_MEM - curr_budget.mem)
+    };
+    let (prev_cpu, prev_mem) = if cursor > 0 {
+        let prev_budget = states[cursor - 1].1;
+        (MAX_CPU - prev_budget.cpu, MAX_MEM - prev_budget.mem)
+    } else {
+        (0, 0)
+    };
+
     Line::from(vec![
         "Current: ".into(),
         label.fg(Color::Blue).add_modifier(Modifier::BOLD),

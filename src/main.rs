@@ -2,14 +2,14 @@ mod app;
 mod utils;
 
 use std::ffi::OsStr;
+use std::fs;
 use std::path::PathBuf;
-use std::{fs, process};
 
+use anyhow::{anyhow, Context};
 use app::App;
 use clap::{command, Parser, Subcommand};
-use pallas::codec::minicbor::decode::Error;
-use pallas::ledger::primitives::babbage::Language;
 
+use pallas::ledger::primitives::babbage::Language;
 use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
@@ -51,26 +51,10 @@ fn main() -> Result<(), anyhow::Error> {
 
             for param in parameters {
                 let data: PlutusData = {
-                    let bytes = hex::decode(param)
-                        .map_err::<Error, _>(|e| {
-                            Error::message(format!("Invalid hex-encoded string: {e}")).into()
-                        })
-                        .unwrap_or_else(|e| {
-                            println!("{}", e);
-                            process::exit(1)
-                        });
+                    let bytes = hex::decode(param).context("could not hex-decode parameter")?;
 
                     uplc::plutus_data(&bytes)
-                        .map_err::<Error, _>(|e| {
-                            Error::message(format!(
-                                "Invalid Plutus data; malformed CBOR encoding: {e}"
-                            ))
-                            .into()
-                        })
-                        .unwrap_or_else(|e| {
-                            println!("{}", e);
-                            process::exit(1)
-                        })
+                        .map_err(|e| anyhow!("could not decode plutus data: {}", e))?
                 };
                 program = program.apply_data(data);
             }
@@ -100,8 +84,8 @@ fn main() -> Result<(), anyhow::Error> {
                 ..Default::default()
             };
             let app_result = app.run(&mut terminal);
-            utils::restore()?;
-            Ok(app_result.unwrap()) // TODO
+            utils::restore().and(app_result)?;
+            Ok(())
         }
         None => {
             println!("No command provided");

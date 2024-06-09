@@ -48,27 +48,24 @@ pub fn restore() -> io::Result<()> {
 }
 
 pub fn env_to_string(env: &Rc<Vec<Value>>) -> String {
-    let mut result = String::new();
-    for (idx, v) in env.iter().rev().enumerate() {
-        if idx > 0 {
-            result.push_str("\n");
-        }
-        result.push_str(
+    env.iter()
+        .rev()
+        .enumerate()
+        .map(|(idx, v)| {
             format!(
                 "{}: {}",
                 format!("i_{}", idx + 1).blue(),
                 uplc::machine::discharge::value_as_term(v.clone())
             )
-            .as_str(),
-        );
-    }
-    return result;
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 pub fn context_to_string(context: Context) -> String {
     let mut result = String::new();
     do_context_to_string(&context, &mut result);
-    return result;
+    result
 }
 
 pub fn do_context_to_string(context: &Context, so_far: &mut String) {
