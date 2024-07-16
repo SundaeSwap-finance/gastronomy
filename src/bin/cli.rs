@@ -1,5 +1,4 @@
-mod app;
-mod utils;
+use gastronomy::{app, utils};
 
 use std::ffi::OsStr;
 use std::fs;
