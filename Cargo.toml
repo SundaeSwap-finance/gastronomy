@@ -30,7 +30,7 @@ lto = "thin"
 
 [[bin]]
 name = "gastronomy-cli"
-path = "src/bin/cli.rs"
+path = "src/bin/cli/main.rs"
 
 [workspace]
 exclude = ["src-tauri/Cargo.toml"]

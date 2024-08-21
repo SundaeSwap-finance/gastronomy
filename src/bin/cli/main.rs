@@ -1,5 +1,3 @@
-use gastronomy::{app, utils};
-
 use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
@@ -13,6 +11,9 @@ use uplc::ast::{FakeNamedDeBruijn, NamedDeBruijn, Program};
 use uplc::machine::cost_model::{CostModel, ExBudget};
 use uplc::machine::{Machine, MachineState};
 use uplc::{parser, PlutusData};
+
+mod app;
+mod utils;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
