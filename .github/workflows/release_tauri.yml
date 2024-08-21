@@ -26,6 +26,10 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
+      - name: enable windows longpaths
+        run: |
+          git config --global core.longpaths true
+
       - uses: actions/checkout@v4
 
       - name: setup node
