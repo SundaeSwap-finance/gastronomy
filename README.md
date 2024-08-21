@@ -4,13 +4,19 @@ Smart contracts on Cardano tend to be very small, so this UPLC Debugger stores t
 
 ## Quick Start
 
+CLI tool:
 ```sh
-gastronomy run test_data/fibonacci.uplc 03
+gastronomy-cli run test_data/fibonacci.uplc 03
 ```
 
 - N - Advance to the next step
 - P - Rewind to the previous step
 - Q - Quit
+
+GUI:
+```
+gastronomy
+```
 
 ## Features
 
@@ -45,3 +51,4 @@ Below you will find the planned and completed features for the Gastronomy debugg
 - [ ] Sourcemap integration
   - [ ] Aiken integration
   - [ ] Plu-ts integration
+
