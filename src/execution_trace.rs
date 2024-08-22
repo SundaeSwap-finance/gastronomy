@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub type Value = String;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionTrace {
     pub identifier: String,
     pub filename: String,
@@ -15,6 +16,7 @@ pub struct ExecutionTrace {
 }
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Frame {
     pub label: String,
     pub context: Vec<String>,
@@ -25,12 +27,14 @@ pub struct Frame {
 }
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EnvVar {
     pub name: String,
     pub value: Value,
 }
 
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExBudget {
     pub cpu: i64,
     pub mem: i64,
@@ -52,18 +56,34 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
     let mut frames = vec![];
     for (state, budget) in states {
         let (label, context, env, term, ret_value) = match state {
-            MachineState::Compute(context, env, term) => {
-                ("Compute", parse_context(context), parse_env(env), term.to_string(), None)
-            },
+            MachineState::Compute(context, env, term) => (
+                "Compute",
+                parse_context(context),
+                parse_env(env),
+                term.to_string(),
+                None,
+            ),
             MachineState::Done(term) => {
                 let prev_frame: &Frame = frames.last().expect("Invalid program starts with return");
-                ("Done", prev_frame.context.clone(), prev_frame.env.clone(), term.to_string(), None)
-            },
+                (
+                    "Done",
+                    prev_frame.context.clone(),
+                    prev_frame.env.clone(),
+                    term.to_string(),
+                    None,
+                )
+            }
             MachineState::Return(context, value) => {
                 let prev_frame: &Frame = frames.last().expect("Invalid program starts with return");
                 let ret_value = parse_uplc_value(value.clone());
-                ("Return", parse_context(context), prev_frame.env.clone(), prev_frame.term.clone(), Some(ret_value))
-            },
+                (
+                    "Return",
+                    parse_context(context),
+                    prev_frame.env.clone(),
+                    prev_frame.term.clone(),
+                    Some(ret_value),
+                )
+            }
         };
         frames.push(Frame {
             label: label.to_string(),
@@ -74,7 +94,7 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
             budget: ExBudget {
                 cpu: budget.cpu,
                 mem: budget.mem,
-            }
+            },
         })
     }
     frames
@@ -93,25 +113,13 @@ fn parse_context(context: &Context) -> Vec<String> {
 
 fn parse_context_frame(context: &Context) -> (String, Option<&Context>) {
     match context {
-        Context::FrameAwaitArg(_, next) => {
-            ("Get Function Argument".into(), Some(next))
-        },
-        Context::FrameAwaitFunTerm(_, _, next) => {
-            ("Get Function".into(), Some(next))
-        },
-        Context::FrameAwaitFunValue(_, next) => {
-            ("Evaluate Function".into(), Some(next))
-        },
-        Context::FrameCases(_, _, next) => {
-            ("Match Cases".into(), Some(next))
-        },
-        Context::FrameConstr(_, _, _, _, next) => {
-            ("Construct Data".into(), Some(next))
-        },
-        Context::FrameForce(next) => {
-            ("Force".into(), Some(next))
-        },
-        Context::NoFrame => ("Root".into(), None)
+        Context::FrameAwaitArg(_, next) => ("Get Function Argument".into(), Some(next)),
+        Context::FrameAwaitFunTerm(_, _, next) => ("Get Function".into(), Some(next)),
+        Context::FrameAwaitFunValue(_, next) => ("Evaluate Function".into(), Some(next)),
+        Context::FrameCases(_, _, next) => ("Match Cases".into(), Some(next)),
+        Context::FrameConstr(_, _, _, _, next) => ("Construct Data".into(), Some(next)),
+        Context::FrameForce(next) => ("Force".into(), Some(next)),
+        Context::NoFrame => ("Root".into(), None),
     }
 }
 

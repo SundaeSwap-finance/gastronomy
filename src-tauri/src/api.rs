@@ -1,36 +1,20 @@
-use std::path::PathBuf;
-
 use gastronomy::Frame;
-use serde::{Deserialize, Serialize};
-
-#[derive(Deserialize)]
-pub struct CreateTraceRequest {
-    pub file: PathBuf,
-    pub parameters: Vec<String>,
-}
+use serde::Serialize;
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateTraceResponse {
     pub identifier: String,
 }
 
-#[derive(Deserialize)]
-pub struct GetTraceSummaryRequest {
-    pub identifier: String,
-}
-
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetTraceSummaryResponse {
     pub frame_count: usize,
 }
 
-#[derive(Deserialize)]
-pub struct GetFrameRequest {
-    pub identifier: String,
-    pub frame: usize,
-}
-
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetFrameResponse {
     pub frame: Frame,
 }

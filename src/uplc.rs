@@ -2,9 +2,19 @@ use std::{ffi::OsStr, fs, path::Path};
 
 use anyhow::{anyhow, Context, Result};
 use pallas::ledger::primitives::babbage::Language;
-use uplc::{ast::{FakeNamedDeBruijn, NamedDeBruijn, Program}, machine::{cost_model::{CostModel, ExBudget}, Machine, MachineState}, parser, PlutusData};
+use uplc::{
+    ast::{FakeNamedDeBruijn, NamedDeBruijn, Program},
+    machine::{
+        cost_model::{CostModel, ExBudget},
+        Machine, MachineState,
+    },
+    parser, PlutusData,
+};
 
-pub fn execute_program(file: &Path, parameters: &[String]) -> Result<Vec<(MachineState, ExBudget)>> {
+pub fn execute_program(
+    file: &Path,
+    parameters: &[String],
+) -> Result<Vec<(MachineState, ExBudget)>> {
     let mut program: Program<NamedDeBruijn> =
         if file.extension().and_then(OsStr::to_str) == Some("uplc") {
             let code = fs::read_to_string(file)?;
@@ -17,17 +27,28 @@ pub fn execute_program(file: &Path, parameters: &[String]) -> Result<Vec<(Machin
         };
     for (i, param) in parameters.iter().enumerate() {
         let data: PlutusData = {
-            let bytes = hex::decode(param).context(format!("could not hex-decode parameter {}", i))?;
-            uplc::plutus_data(&bytes).map_err(|e| anyhow!("could not decode plutus data for parameter {}: {}", i, e))?
+            let bytes =
+                hex::decode(param).context(format!("could not hex-decode parameter {}", i))?;
+            uplc::plutus_data(&bytes)
+                .map_err(|e| anyhow!("could not decode plutus data for parameter {}: {}", i, e))?
         };
         program = program.apply_data(data);
     }
 
-    let mut machine = Machine::new(Language::PlutusV2, CostModel::default(), ExBudget::default(), 1);
-    let mut state = machine.get_initial_machine_state(program.term).map_err(|err| anyhow!("could not get initial state: {}", err))?;
+    let mut machine = Machine::new(
+        Language::PlutusV2,
+        CostModel::default(),
+        ExBudget::default(),
+        1,
+    );
+    let mut state = machine
+        .get_initial_machine_state(program.term)
+        .map_err(|err| anyhow!("could not get initial state: {}", err))?;
     let mut states = vec![(state.clone(), machine.ex_budget)];
     while !matches!(state, MachineState::Done(_)) {
-        state = machine.step(state).map_err(|err| anyhow!("could not evaluate state: {}", err))?;
+        state = machine
+            .step(state)
+            .map_err(|err| anyhow!("could not evaluate state: {}", err))?;
         states.push((state.clone(), machine.ex_budget));
     }
 
