@@ -1,21 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
-
-const TOTAL_STEPS = 30;
+import { invoke } from "@tauri-apps/api";
+import {
+  IFrame,
+  IFrameResponse,
+  ISummaryResponse,
+  ITraceResponse,
+} from "../../types";
+import DisplayString from "../DisplayString";
 
 const Debugger = () => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+  const [frames, setFrames] = useState<IFrame[]>([]);
 
   const handleNext = useCallback(() => {
-    if (currentStep < TOTAL_STEPS) {
-      setCurrentStep((prev) => prev + 1);
+    if (currentFrameIndex < frames.length - 1) {
+      setCurrentFrameIndex((prev) => prev + 1);
     }
-  }, [currentStep]);
+  }, [currentFrameIndex, frames.length]);
 
   const handlePrevious = useCallback(() => {
-    if (currentStep > 0) {
-      setCurrentStep((prev) => prev - 1);
+    if (currentFrameIndex > 0) {
+      setCurrentFrameIndex((prev) => prev - 1);
     }
-  }, [currentStep]);
+  }, [currentFrameIndex]);
 
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
@@ -35,6 +42,43 @@ const Debugger = () => {
     };
   }, [handleKeyPress]);
 
+  const fetchFrames = async () => {
+    try {
+      const { identifier } = await invoke<ITraceResponse>("create_trace", {
+        file: "/Users/selvioperez/Documents/Projects/gastronomy/test_data/fibonacci.uplc",
+        parameters: ["03"],
+      });
+
+      const { frameCount } = await invoke<ISummaryResponse>(
+        "get_trace_summary",
+        {
+          identifier,
+        }
+      );
+
+      const framePromises = Array.from({ length: frameCount }, (_, i) =>
+        invoke<IFrameResponse>("get_frame", {
+          identifier,
+          frame: i,
+        })
+      );
+
+      const frames: IFrame[] = await Promise.all(
+        framePromises.map((p) => p.then((res) => res.frame))
+      );
+      setFrames(frames);
+    } catch (error) {
+      console.error("Failed to fetch frames:", error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    fetchFrames();
+  }, []);
+
+  const currentFrame = frames[currentFrameIndex];
+
   return (
     <div className="px-2 pb-3 pt-4 h-screen bg-slate-950 text-lime-600 font-['Source_Code_Pro'] relative">
       <div className="border border-lime-600 h-full pt-3">
@@ -45,20 +89,22 @@ const Debugger = () => {
           <div className="px-2 pt-1 pb-4">
             <div className="overflow-hidden h-4 mb-1 text-xs flex relative">
               <div
-                style={{ width: `${(currentStep / TOTAL_STEPS) * 100}%` }}
+                style={{
+                  width: `${(currentFrameIndex / frames.length) * 100}%`,
+                }}
                 className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-lime-900 overflow-auto"
               />
             </div>
             <div className="text-xs absolute top-[33px] right-1/2 translate-x-1/2 text-lime-600">
-              Step {currentStep}/{TOTAL_STEPS}
+              Step {currentFrameIndex}/{frames.length}
             </div>
             <div className="flex justify-between">
               <div>
                 Current: <span className="text-blue-600">Compute</span>
               </div>
               <div>
-                Budget: <span className="text-blue-600">100 steps</span> (+100){" "}
-                <span className="text-blue-600">100 mem</span> (+100)
+                Budget: <span className="text-blue-600">{100} steps</span>{" "}
+                (+100) <span className="text-blue-600">100 mem</span> (+100)
               </div>
               <div>
                 Next: <span className="text-blue-600">Compute</span>
@@ -71,7 +117,7 @@ const Debugger = () => {
                 Term
               </h2>
               <div className="p-4 overflow-auto absolute inset-0">
-                Lorem ipsum dolor sit.
+                <DisplayString string={currentFrame.term} />
               </div>
             </div>
             <div className="relative">
@@ -81,7 +127,11 @@ const Debugger = () => {
               <div className="h-full grid grid-rows-2">
                 <div className="relative">
                   <div className="p-4 overflow-auto absolute inset-0">
-                    Lorem ipsum dolor sit.
+                    {currentFrame.context.map((c, i) => (
+                      <div key={i}>
+                        {i !== 0 && "->"} {c}
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div className="p-3 border-t border-lime-600 relative">
@@ -90,7 +140,11 @@ const Debugger = () => {
                   </h2>
                   <div className="relative h-full">
                     <div className="p-4 overflow-auto absolute inset-0">
-                      Lorem ipsum dolor sit.
+                      {currentFrame.env.map(({ name, value }, i) => (
+                        <div key={i}>
+                          {name}: <DisplayString string={value} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
