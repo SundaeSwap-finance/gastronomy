@@ -859,6 +859,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "6.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "804c8821570c3f8b70230c2ba75ffa5c0f9a4189b9a432b6656c536712acae28"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
+]
+
+[[package]]
 name = "der"
 version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1228,7 +1242,7 @@ dependencies = [
 
 [[package]]
 name = "gastronomy"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1238,13 +1252,16 @@ dependencies = [
  "num-bigint",
  "pallas",
  "ratatui",
+ "serde",
  "uplc",
+ "uuid",
 ]
 
 [[package]]
 name = "gastronomy-ui"
 version = "0.1.0"
 dependencies = [
+ "dashmap",
  "gastronomy",
  "serde",
  "serde_json",

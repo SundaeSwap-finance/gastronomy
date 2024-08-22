@@ -15,6 +15,8 @@ uplc = { git="https://github.com/SundaeSwap-finance/aiken.git", rev = "68965b52"
 num-bigint = "0.4"
 pallas = "0.22"
 ratatui = { version = "0.26", features = ["all-widgets"] }
+serde = "1"
+uuid = { version = "1", features = ["v4"] }
 crossterm = "0.27"
 color-eyre = "0.6"
 # pretty = "0.12.3"

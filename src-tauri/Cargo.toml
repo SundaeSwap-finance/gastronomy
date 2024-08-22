@@ -11,6 +11,7 @@ description = "Gastronomy GUI"
 tauri-build = { version = "1.5.3", features = [] }
 
 [dependencies]
+dashmap = "6"
 gastronomy = { path = ".." }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
