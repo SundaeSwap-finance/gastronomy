@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api";
 import {
   IFrame,
@@ -7,20 +7,35 @@ import {
   ITraceResponse,
 } from "../../types";
 import DisplayString from "../DisplayString";
+import Modal from "../Modal";
+import DebuggerNavigation from "../DebuggerNavigation";
 
 const Debugger = () => {
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [frames, setFrames] = useState<IFrame[]>([]);
+
+  const currentFrame = frames[currentFrameIndex];
 
   const handleNext = useCallback(() => {
     if (currentFrameIndex < frames.length - 1) {
       setCurrentFrameIndex((prev) => prev + 1);
+      setIsModalOpen(false);
     }
   }, [currentFrameIndex, frames.length]);
+
+  const displayLabel = (frameIndex: number) => {
+    if (frameIndex === frames.length - 1) return "Done";
+    if (frameIndex === frames.length) return "None";
+    if (frames[frameIndex].retValue) return "Return";
+    return "Compute";
+  };
 
   const handlePrevious = useCallback(() => {
     if (currentFrameIndex > 0) {
       setCurrentFrameIndex((prev) => prev - 1);
+      setIsModalOpen(false);
     }
   }, [currentFrameIndex]);
 
@@ -70,6 +85,8 @@ const Debugger = () => {
     } catch (error) {
       console.error("Failed to fetch frames:", error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -77,7 +94,28 @@ const Debugger = () => {
     fetchFrames();
   }, []);
 
-  const currentFrame = frames[currentFrameIndex];
+  useEffect(() => {
+    if (currentFrame?.retValue) {
+      setIsModalOpen(true);
+    }
+  }, [currentFrame?.retValue]);
+
+  const { cpu: prevCpu = 0, mem: prevMem = 0 } =
+    frames[currentFrameIndex - 1]?.budget ?? {};
+
+  const { cpu = 0, mem = 0 } = currentFrame?.budget ?? [];
+
+  const { stepsDiff, memDiff } = useMemo(() => {
+    return { stepsDiff: cpu - prevCpu, memDiff: mem - prevMem };
+  }, [cpu, mem, prevCpu, prevMem]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!frames.length) {
+    return <div>No frames found</div>;
+  }
 
   return (
     <div className="px-2 pb-3 pt-4 h-screen bg-slate-950 text-lime-600 font-['Source_Code_Pro'] relative">
@@ -96,18 +134,35 @@ const Debugger = () => {
               />
             </div>
             <div className="text-xs absolute top-[33px] right-1/2 translate-x-1/2 text-lime-600">
-              Step {currentFrameIndex}/{frames.length}
+              Step {currentFrameIndex}/{frames.length - 1}
             </div>
             <div className="flex justify-between">
-              <div>
-                Current: <span className="text-blue-600">Compute</span>
+              <div className="w-36">
+                Current:{" "}
+                <span className="text-blue-600">
+                  {displayLabel(currentFrameIndex)}
+                </span>
               </div>
-              <div>
-                Budget: <span className="text-blue-600">{100} steps</span>{" "}
-                (+100) <span className="text-blue-600">100 mem</span> (+100)
+              <div className="flex gap-2">
+                Budget:
+                <div className="flex gap-2">
+                  <span className="text-blue-600">
+                    {currentFrame.budget.cpu} steps
+                  </span>{" "}
+                  {!!stepsDiff && `+(${stepsDiff})`}
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-blue-600">
+                    {currentFrame.budget.mem} mem
+                  </span>
+                  {!!memDiff && `+(${memDiff})`}
+                </div>
               </div>
-              <div>
-                Next: <span className="text-blue-600">Compute</span>
+              <div className="w-36 text-right">
+                Next:{" "}
+                <span className="text-blue-600">
+                  {displayLabel(currentFrameIndex + 1)}
+                </span>
               </div>
             </div>
           </div>
@@ -153,24 +208,26 @@ const Debugger = () => {
           </div>
         </div>
       </div>
-      <div className="px-2 bg-slate-950 flex absolute right-1/2 translate-x-1/2 bottom-1 gap-2 text-sm">
-        <div>
-          <button className="hover:underline" onClick={handleNext}>
-            Next
-          </button>{" "}
-          <span className="text-blue-600">{"<N>"}</span>
+      <DebuggerNavigation
+        className="absolute right-1/2 translate-x-1/2 bottom-1"
+        handleNext={handleNext}
+        handlePrevious={handlePrevious}
+      />
+      <Modal isOpen={isModalOpen}>
+        <div className="">
+          <h2 className="absolute left-4 -top-3 bg-slate-950 px-2 text-blue-600">
+            Return Value
+          </h2>
+          <div className="px-4 pt-4 pb-6 h-[30rem] overflow-auto">
+            <DisplayString string={currentFrame.retValue} />
+          </div>
         </div>
-        <div>
-          <button className="hover:underline" onClick={handlePrevious}>
-            Previous
-          </button>{" "}
-          <span className="text-blue-600">{"<P>"}</span>
-        </div>
-        <div>
-          <button className="hover:underline">Quit</button>{" "}
-          <span className="text-blue-600">{"<Q>"}</span>
-        </div>
-      </div>
+        <DebuggerNavigation
+          className="absolute right-1/2 translate-x-1/2 -bottom-2"
+          handleNext={handleNext}
+          handlePrevious={handlePrevious}
+        />
+      </Modal>
     </div>
   );
 };
