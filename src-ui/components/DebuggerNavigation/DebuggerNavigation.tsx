@@ -5,12 +5,14 @@ interface DebuggerNavigationProps {
   className?: string;
   handleNext: () => void;
   handlePrevious: () => void;
+  handleQuite: () => void;
 }
 
 const DebuggerNavigation: FC<DebuggerNavigationProps> = ({
   className,
   handleNext,
   handlePrevious,
+  handleQuite,
 }) => {
   return (
     <div className={cx("px-2 bg-slate-950 flex gap-2 text-sm", className)}>
@@ -27,7 +29,9 @@ const DebuggerNavigation: FC<DebuggerNavigationProps> = ({
         <span className="text-blue-600">{"<P>"}</span>
       </div>
       <div>
-        <button className="hover:underline">Quit</button>{" "}
+        <button className="hover:underline" onClick={handleQuite}>
+          Quit
+        </button>{" "}
         <span className="text-blue-600">{"<Q>"}</span>
       </div>
     </div>

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api";
+import cx from "classnames";
 import {
   IFrame,
   IFrameResponse,
@@ -9,14 +10,33 @@ import {
 import DisplayString from "../DisplayString";
 import Modal from "../Modal";
 import DebuggerNavigation from "../DebuggerNavigation";
+import { TbFaceIdError } from "react-icons/tb";
 
-const Debugger = () => {
+interface IDebuggerProps {
+  file: string;
+  fileName: string;
+  onQuit: () => void;
+  parameters: string[];
+}
+
+const Debugger: FC<IDebuggerProps> = ({
+  onQuit,
+  file,
+  parameters,
+  fileName,
+}) => {
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [frames, setFrames] = useState<IFrame[]>([]);
 
   const currentFrame = frames[currentFrameIndex];
+
+  const handleQuite = useCallback(() => {
+    onQuit();
+    setFrames([]);
+  }, [onQuit]);
 
   const handleNext = useCallback(() => {
     if (currentFrameIndex < frames.length - 1) {
@@ -45,9 +65,11 @@ const Debugger = () => {
         handleNext();
       } else if (event.key === "p") {
         handlePrevious();
+      } else if (event.key === "q") {
+        handleQuite();
       }
     },
-    [handleNext, handlePrevious]
+    [handleNext, handlePrevious, handleQuite]
   );
 
   useEffect(() => {
@@ -57,11 +79,11 @@ const Debugger = () => {
     };
   }, [handleKeyPress]);
 
-  const fetchFrames = async () => {
+  const fetchFrames = useCallback(async () => {
     try {
       const { identifier } = await invoke<ITraceResponse>("create_trace", {
-        file: "/Users/selvioperez/Documents/Projects/gastronomy/test_data/fibonacci.uplc",
-        parameters: ["03"],
+        file,
+        parameters,
       });
 
       const { frameCount } = await invoke<ISummaryResponse>(
@@ -83,16 +105,15 @@ const Debugger = () => {
       );
       setFrames(frames);
     } catch (error) {
-      console.error("Failed to fetch frames:", error);
-      throw error;
+      setError(error as string);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [file, parameters]);
 
   useEffect(() => {
     fetchFrames();
-  }, []);
+  }, [fetchFrames, file, parameters]);
 
   useEffect(() => {
     if (currentFrame?.retValue) {
@@ -113,15 +134,33 @@ const Debugger = () => {
     return <div>Loading...</div>;
   }
 
-  if (!frames.length) {
-    return <div>No frames found</div>;
+  if (error) {
+    return (
+      <div className="h-full flex justify-center items-center">
+        <div className="max-w-[30rem] flex flex-col gap-6 items-center">
+          <TbFaceIdError size={80} />
+          <div className="text-center">
+            <span className="text-blue-600">An error occurred:</span> {error}
+          </div>
+          <button
+            className={cx(
+              "py-2 px-6 text-lime-600 border border-lime-600 transition-colors",
+              "hover:bg-lime-600 hover:text-slate-950 duration-300 ease-in-out"
+            )}
+            onClick={onQuit}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="px-2 pb-3 pt-4 h-screen bg-slate-950 text-lime-600 font-['Source_Code_Pro'] relative">
+    <div className="px-2 pb-3 pt-4 relative h-full">
       <div className="border border-lime-600 h-full pt-3">
         <h1 className="px-2 bg-slate-950 absolute right-1/2 translate-x-1/2 top-1">
-          Gastronomy Debugger (fibonacci.uplc)
+          Gastronomy Debugger ({fileName})
         </h1>
         <div className="grid grid-rows-[max-content_1fr] h-full text-sm">
           <div className="px-2 pt-1 pb-4">
@@ -212,6 +251,7 @@ const Debugger = () => {
         className="absolute right-1/2 translate-x-1/2 bottom-1"
         handleNext={handleNext}
         handlePrevious={handlePrevious}
+        handleQuite={handleQuite}
       />
       <Modal isOpen={isModalOpen}>
         <div className="">
@@ -226,6 +266,7 @@ const Debugger = () => {
           className="absolute right-1/2 translate-x-1/2 -bottom-2"
           handleNext={handleNext}
           handlePrevious={handlePrevious}
+          handleQuite={handleQuite}
         />
       </Modal>
     </div>
