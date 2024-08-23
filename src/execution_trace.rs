@@ -52,6 +52,9 @@ impl ExecutionTrace {
     }
 }
 
+const MAX_CPU: i64 = 10000000000;
+const MAX_MEM: i64 = 14000000;
+
 fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) -> Vec<Frame> {
     let mut frames = vec![];
     for (state, budget) in states {
@@ -92,8 +95,8 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
             term,
             ret_value,
             budget: ExBudget {
-                cpu: budget.cpu,
-                mem: budget.mem,
+                cpu: MAX_CPU - budget.cpu,
+                mem: MAX_MEM - budget.mem,
             },
         })
     }
