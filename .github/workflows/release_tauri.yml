@@ -1,11 +1,9 @@
 name: 'publish'
 
 on:
-  push:
-    tags:
-      - '**[0-9]+.[0-9]+.[0-9]+*'
+  release:
 
-# This workflow will trigger whenever we cut a release (as recognized by cargo dist, which builds the CLI)
+# This workflow will trigger after we have cut a release, and add the tauri binaries to it
 
 jobs:
   publish-tauri:
@@ -58,9 +56,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
-          releaseName: 'Gastronomy UI v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
-          releaseDraft: false
-          prerelease: false
+          releaseId: ${{ github.event.release.id }}
           args: ${{ matrix.args }}
