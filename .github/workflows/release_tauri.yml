@@ -37,7 +37,7 @@ jobs:
       - id: release-tag
         name: extract release tag
         run: |
-          TAG=$(echo "$PLAN" | jq '.announcement_version')
+          TAG=$(echo "$PLAN" | jq '.announcement_tag')
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v4
