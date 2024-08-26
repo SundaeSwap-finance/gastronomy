@@ -1,46 +1,66 @@
-import { useEffect, useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
-import { invoke } from '@tauri-apps/api';
-import './App.css';
-
-async function greet(name: string): Promise<string> {
-  const result: string = await invoke('greet', { name });
-  return result;
-}
+import { ChangeEventHandler, useState } from "react";
+import Debugger from "./components/Debugger";
+import FilePicker from "./components/FilePicker";
+import cx from "classnames";
 
 function App() {
-  const [count, setCount] = useState(0);
-  const [greeting, setGreeting] = useState('Loading...');
-  useEffect(() => {
-    greet('World')
-      .then(res => setGreeting(res))
-      .catch(err => setGreeting(err.toString()));
-  });
+  const [displayDebugger, setDisplayDebugger] = useState(false);
+  const [parameters, setParameters] = useState<string[]>([]);
+  const [file, setFile] = useState("");
+  const fileName = file.substring(file.lastIndexOf("/") + 1);
+
+  const handleChange: ChangeEventHandler<HTMLTextAreaElement> = (event) => {
+    setParameters(event.target.value.split("\n"));
+  };
+
+  const onQuit = () => {
+    setDisplayDebugger(false);
+    setFile("");
+    setParameters([]);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>{greeting}</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src-ui/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="bg-slate-950 h-svh font-['Source_Code_Pro'] text-lime-600">
+      {displayDebugger ? (
+        <Debugger
+          file={file}
+          fileName={fileName}
+          onQuit={onQuit}
+          parameters={parameters}
+        />
+      ) : (
+        <div className="p-4 flex justify-center items-center h-full flex-col gap-11">
+          <h1 className="text-6xl uppercase font-['Pixelify_Sans']">Gastronomy</h1>
+          <div className="border border-lime-600 p-6 flex flex-col gap-6 w-[30rem]">
+            <FilePicker setFile={setFile} fileName={fileName} />
+            <div className="flex flex-col gap-4">
+              <label htmlFor="parameters" className="cursor-pointer">
+                Parameters:
+              </label>
+              <textarea
+                className="p-2 w-full bg-slate-900 text-white border border-slate-800 rounded resize-none h-44 focus:outline-none"
+                id="parameters"
+                name="parameters"
+                onChange={handleChange}
+                placeholder="Enter parameters, each on a new line"
+                value={parameters?.join("\n")}
+              />
+            </div>
+            <button
+              className={cx(
+                "p-2 text-lime-600 border border-lime-600 transition-colors duration-300 ease-in-out",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                { "hover:bg-lime-600 hover:text-slate-950": file }
+              )}
+              onClick={() => setDisplayDebugger(true)}
+              disabled={!file}
+            >
+              Run Debugger
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
