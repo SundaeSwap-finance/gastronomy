@@ -24,6 +24,9 @@ tauri = { version = "1.7.0", features = [ "dialog-open"] }
 # DO NOT REMOVE!!
 custom-protocol = [ "tauri/custom-protocol" ]
 
+[package.metadata.dist]
+dist = false
+
 [package.metadata.release]
 pre-release-replacements = [
   {file="tauri.conf.json", search="\"version\": \".*\"", replace="\"version\": \"{{version}}\""},
