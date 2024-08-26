@@ -27,6 +27,8 @@ targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-
 pr-run-mode = "plan"
 # Extra setup steps to make tauri happy
 github-build-setup = "../setup/build-setup.yml"
+# Publish tauri packages after everything else
+post-announce-jobs = ["./release_tauri"]
 
 [workspace.metadata.dist.github-custom-runners]
 x86_64-unknown-linux-gnu = "ubuntu-22.04"

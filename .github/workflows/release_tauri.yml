@@ -1,9 +1,11 @@
 name: 'Release Tauri'
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
 
 # This workflow will trigger after we have cut a release, and add the tauri binaries to it
 
@@ -25,10 +27,18 @@ jobs:
             args: '--target x86_64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
+    env:
+      PLAN: ${{ inputs.plan }}
     steps:
       - name: enable windows longpaths
         run: |
           git config --global core.longpaths true
+
+      - id: release-tag
+        name: extract release tag
+        run: |
+          TAG=$(echo "$PLAN" | jq '.announcement_version')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - uses: actions/checkout@v4
 
@@ -58,5 +68,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          releaseId: ${{ github.event.release.id }}
+          tagName: ${{ steps.release-tag.outputs.tag }}
           args: ${{ matrix.args }}
