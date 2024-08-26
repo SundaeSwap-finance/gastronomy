@@ -1,1 +1,2 @@
-- run: mkdir dist
+- name: Make empty dist dir
+  run: mkdir dist
