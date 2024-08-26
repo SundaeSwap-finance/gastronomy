@@ -68,5 +68,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          releaseName: ${{ steps.release-tag.outputs.tag }}
           tagName: ${{ steps.release-tag.outputs.tag }}
           args: ${{ matrix.args }}
