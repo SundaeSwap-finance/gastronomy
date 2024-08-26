@@ -1256,7 +1256,7 @@ dependencies = [
 
 [[package]]
 name = "gastronomy"
-version = "0.3.8"
+version = "0.3.9"
 dependencies = [
  "anyhow",
  "hex",
@@ -1269,7 +1269,7 @@ dependencies = [
 
 [[package]]
 name = "gastronomy-cli"
-version = "0.3.8"
+version = "0.3.9"
 dependencies = [
  "anyhow",
  "clap",
@@ -1282,7 +1282,7 @@ dependencies = [
 
 [[package]]
 name = "gastronomy-ui"
-version = "0.3.8"
+version = "0.3.9"
 dependencies = [
  "dashmap",
  "gastronomy",
