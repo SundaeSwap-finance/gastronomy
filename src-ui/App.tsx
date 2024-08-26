@@ -29,7 +29,8 @@ function App() {
           parameters={parameters}
         />
       ) : (
-        <div className="p-4 flex justify-center items-center h-full">
+        <div className="p-4 flex justify-center items-center h-full flex-col gap-11">
+          <h1 className="text-6xl uppercase font-['Pixelify_Sans']">Gastronomy</h1>
           <div className="border border-lime-600 p-6 flex flex-col gap-6 w-[30rem]">
             <FilePicker setFile={setFile} fileName={fileName} />
             <div className="flex flex-col gap-4">
@@ -37,7 +38,7 @@ function App() {
                 Parameters:
               </label>
               <textarea
-                className="p-2 w-full bg-slate-800 text-white border border-slate-700 rounded resize-none h-44 focus:outline-none"
+                className="p-2 w-full bg-slate-900 text-white border border-slate-800 rounded resize-none h-44 focus:outline-none"
                 id="parameters"
                 name="parameters"
                 onChange={handleChange}

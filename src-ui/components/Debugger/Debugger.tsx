@@ -11,6 +11,7 @@ import DisplayString from "../DisplayString";
 import Modal from "../Modal";
 import DebuggerNavigation from "../DebuggerNavigation";
 import { TbFaceIdError } from "react-icons/tb";
+import { Triangle } from "react-loader-spinner";
 
 interface IDebuggerProps {
   file: string;
@@ -131,7 +132,16 @@ const Debugger: FC<IDebuggerProps> = ({
   }, [cpu, mem, prevCpu, prevMem]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="h-svh flex items-center justify-center">
+        <Triangle
+          height="80"
+          width="80"
+          color="#55960E"
+          ariaLabel="triangle-loading"
+        />
+      </div>
+    );
   }
 
   if (error) {
@@ -139,8 +149,9 @@ const Debugger: FC<IDebuggerProps> = ({
       <div className="h-full flex justify-center items-center">
         <div className="max-w-[30rem] flex flex-col gap-6 items-center">
           <TbFaceIdError size={80} />
-          <div className="text-center">
-            <span className="text-blue-600">An error occurred:</span> {error}
+          <div className="flex flex-col gap-2 text-center">
+            <div className="text-blue-600">An error occurred:</div>
+            <div>{error}</div>
           </div>
           <button
             className={cx(
@@ -167,7 +178,7 @@ const Debugger: FC<IDebuggerProps> = ({
             <div className="overflow-hidden h-4 mb-1 text-xs flex relative">
               <div
                 style={{
-                  width: `${(currentFrameIndex / frames.length) * 100}%`,
+                  width: `${(currentFrameIndex / (frames.length - 1)) * 100}%`,
                 }}
                 className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-lime-900 overflow-auto"
               />
