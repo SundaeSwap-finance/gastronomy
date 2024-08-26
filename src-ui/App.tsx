@@ -7,7 +7,7 @@ function App() {
   const [displayDebugger, setDisplayDebugger] = useState(false);
   const [parameters, setParameters] = useState<string[]>([]);
   const [file, setFile] = useState("");
-  const fileName = file.substring(file.lastIndexOf("/") + 1);
+  const fileName = file.substring(Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\")) + 1);
 
   const handleChange: ChangeEventHandler<HTMLTextAreaElement> = (event) => {
     setParameters(event.target.value.split("\n"));
