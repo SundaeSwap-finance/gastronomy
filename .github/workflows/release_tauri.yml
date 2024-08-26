@@ -1,7 +1,9 @@
-name: 'publish'
+name: 'Release Tauri'
 
 on:
-  release:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
 
 # This workflow will trigger after we have cut a release, and add the tauri binaries to it
 
