@@ -20,7 +20,11 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn create_trace(file: &Path, parameters: Vec<String>, state: State<SessionState>) -> Result<api::CreateTraceResponse, InvokeError> {
+fn create_trace(
+    file: &Path,
+    parameters: Vec<String>,
+    state: State<SessionState>,
+) -> Result<api::CreateTraceResponse, InvokeError> {
     let trace = gastronomy::trace_execution(file, &parameters).map_err(InvokeError::from_anyhow)?;
     let identifier = trace.identifier.clone();
     state.traces.insert(identifier.clone(), trace);
@@ -28,7 +32,10 @@ fn create_trace(file: &Path, parameters: Vec<String>, state: State<SessionState>
 }
 
 #[tauri::command]
-fn get_trace_summary(identifier: &str, state: State<SessionState>) -> Result<api::GetTraceSummaryResponse, InvokeError> {
+fn get_trace_summary(
+    identifier: &str,
+    state: State<SessionState>,
+) -> Result<api::GetTraceSummaryResponse, InvokeError> {
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
@@ -38,7 +45,11 @@ fn get_trace_summary(identifier: &str, state: State<SessionState>) -> Result<api
 }
 
 #[tauri::command]
-fn get_frame(identifier: &str, frame: usize, state: State<SessionState>) -> Result<api::GetFrameResponse, InvokeError> {
+fn get_frame(
+    identifier: &str,
+    frame: usize,
+    state: State<SessionState>,
+) -> Result<api::GetFrameResponse, InvokeError> {
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
@@ -52,8 +63,15 @@ fn get_frame(identifier: &str, frame: usize, state: State<SessionState>) -> Resu
 
 fn main() {
     tauri::Builder::default()
-        .manage(SessionState { traces: DashMap::new() })
-        .invoke_handler(tauri::generate_handler![greet, create_trace, get_trace_summary, get_frame])
+        .manage(SessionState {
+            traces: DashMap::new(),
+        })
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            create_trace,
+            get_trace_summary,
+            get_frame
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,0 +1,19 @@
+[package]
+name = "gastronomy"
+version = "0.3.1"
+edition = "2021"
+repository = "https://github.com/SundaeSwap-finance/gastronomy"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+uplc = { git="https://github.com/SundaeSwap-finance/aiken.git", rev = "68965b52" }
+# uplc = { path = "../aiken/crates/uplc" }
+num-bigint = "0.4"
+pallas = "0.22"
+serde = "1"
+uuid = { version = "1", features = ["v4"] }
+# pretty = "0.12.3"
+hex = "0.4"

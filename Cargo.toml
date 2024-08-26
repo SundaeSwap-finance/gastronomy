@@ -1,41 +1,17 @@
-[package]
-name = "gastronomy"
-version = "0.3.1"
-edition = "2021"
-repository = "https://github.com/SundaeSwap-finance/gastronomy"
-publish = false
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+members = [
+    "gastronomy",
+    "gastronomy-cli",
+    "gastronomy-ui",
+]
 
-[dependencies]
-anyhow = "1"
-clap = { version = "4", features = ["derive"] }
-uplc = { git="https://github.com/SundaeSwap-finance/aiken.git", rev = "68965b52" }
-# uplc = { path = "../aiken/crates/uplc" }
-num-bigint = "0.4"
-pallas = "0.22"
-ratatui = { version = "0.26", features = ["all-widgets"] }
-serde = "1"
-uuid = { version = "1", features = ["v4"] }
-crossterm = "0.27"
-color-eyre = "0.6"
-# pretty = "0.12.3"
-hex = "0.4"
-
-[package.metadata.dist]
-dist = true
+resolver = "2"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
 inherits = "release"
 lto = "thin"
-
-[[bin]]
-name = "gastronomy-cli"
-path = "src/bin/cli/main.rs"
-
-[workspace]
-exclude = ["src-tauri/Cargo.toml"]
 
 # Config for 'cargo dist'
 [workspace.metadata.dist]
