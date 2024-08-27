@@ -1,13 +1,19 @@
-import { ChangeEventHandler, useState } from "react";
+import { ChangeEventHandler, useMemo, useState } from "react";
 import Debugger from "./components/Debugger";
 import FilePicker from "./components/FilePicker";
 import cx from "classnames";
+import gastronomyLogo from "./assets/images/gastronomy-logo.svg";
+import sundaeLogo from "./assets/images/sundae-logo.svg";
 
 function App() {
   const [displayDebugger, setDisplayDebugger] = useState(false);
   const [parameters, setParameters] = useState<string[]>([]);
   const [file, setFile] = useState("");
-  const fileName = file.substring(Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\")) + 1);
+
+  const fileName = useMemo(() => {
+    const parts = file.split(/[/\\]/);
+    return parts[parts.length - 1];
+  }, [file]);
 
   const handleChange: ChangeEventHandler<HTMLTextAreaElement> = (event) => {
     setParameters(event.target.value.split("\n"));
@@ -30,7 +36,10 @@ function App() {
         />
       ) : (
         <div className="p-4 flex justify-center items-center h-full flex-col gap-11">
-          <h1 className="text-6xl uppercase font-['Pixelify_Sans']">Gastronomy</h1>
+          <h1 className="text-6xl uppercase font-['Pixelify_Sans'] flex gap-2 items-center">
+            <img src={gastronomyLogo} alt="Gastronomy" className="h-16" />
+            Gastronomy
+          </h1>
           <div className="border border-lime-600 p-6 flex flex-col gap-6 w-[30rem]">
             <FilePicker setFile={setFile} fileName={fileName} />
             <div className="flex flex-col gap-4">
@@ -57,6 +66,13 @@ function App() {
             >
               Run Debugger
             </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <div>Created by </div>
+            <div className="text-xl font-['Pixelify_Sans'] flex gap-2 items-center text-white">
+              <img src={sundaeLogo} alt="Gastronomy" className="h-8" />
+              Sundae Labs
+            </div>
           </div>
         </div>
       )}
