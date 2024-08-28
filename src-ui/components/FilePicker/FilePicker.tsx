@@ -10,7 +10,12 @@ const FilePicker: FC<IFilePickerProps> = ({ setFile, fileName }) => {
   const handleFilePick = async () => {
     const selectedFile = await open({
       multiple: false,
-      filters: [{ name: "UPLC Files", extensions: ["uplc"] }],
+      filters: [
+        { name: "Executable UPLC", extensions: ["uplc", "flat", "tx"] },
+        { name: "UPLC Files", extensions: ["uplc"] },
+        { name: "Flat Files", extensions: ["flat"] },
+        { name: "Transaction Files", extensions: ["tx"] },
+      ],
     });
 
     if (selectedFile) setFile(selectedFile as string);
