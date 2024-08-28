@@ -26,30 +26,44 @@ const Debugger: FC<IDebuggerProps> = ({
   parameters,
   fileName,
 }) => {
+  const [identifier, setIdentifier] = useState<string | undefined>(undefined);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [frames, setFrames] = useState<IFrame[]>([]);
-
-  const currentFrame = frames[currentFrameIndex];
+  const [frameCount, setFrameCount] = useState<number>(0);
+  const [currentFrame, setCurrentFrame] = useState<IFrame | undefined>(
+    undefined,
+  );
 
   const handleQuit = useCallback(() => {
     onQuit();
-    setFrames([]);
+    setCurrentFrame(undefined);
   }, [onQuit]);
 
   const handleNext = useCallback(() => {
-    if (currentFrameIndex < frames.length - 1) {
+    if (currentFrameIndex < frameCount - 1) {
       setCurrentFrameIndex((prev) => prev + 1);
       setIsModalOpen(false);
     }
-  }, [currentFrameIndex, frames.length]);
+  }, [currentFrameIndex, frameCount]);
+
+  useEffect(() => {
+    const fetchFrame = async () => {
+      if (!identifier) return;
+      const { frame } = await invoke<IFrameResponse>("get_frame", {
+        identifier,
+        frame: currentFrameIndex,
+      });
+      setCurrentFrame(frame);
+    };
+    fetchFrame().catch(setError);
+  }, [currentFrameIndex, identifier]);
 
   const displayLabel = (frameIndex: number) => {
-    if (frameIndex === frames.length - 1) return "Done";
-    if (frameIndex === frames.length) return "None";
-    if (frames[frameIndex].retValue) return "Return";
+    if (frameIndex === frameCount - 1) return "Done";
+    if (frameIndex === frameCount) return "None";
+    if (currentFrame?.retValue) return "Return";
     return "Compute";
   };
 
@@ -87,6 +101,7 @@ const Debugger: FC<IDebuggerProps> = ({
         parameters,
       });
       const identifier = identifiers[0];
+      setIdentifier(identifier);
 
       const { frameCount } = await invoke<ISummaryResponse>(
         "get_trace_summary",
@@ -94,18 +109,7 @@ const Debugger: FC<IDebuggerProps> = ({
           identifier,
         },
       );
-
-      const framePromises = Array.from({ length: frameCount }, (_, i) =>
-        invoke<IFrameResponse>("get_frame", {
-          identifier,
-          frame: i,
-        }),
-      );
-
-      const frames: IFrame[] = await Promise.all(
-        framePromises.map((p) => p.then((res) => res.frame)),
-      );
-      setFrames(frames);
+      setFrameCount(frameCount);
     } catch (error) {
       setError(error as string);
     } finally {
@@ -123,10 +127,10 @@ const Debugger: FC<IDebuggerProps> = ({
     }
   }, [currentFrame?.retValue]);
 
-  const { cpu: prevCpu = 0, mem: prevMem = 0 } =
-    frames[currentFrameIndex - 1]?.budget ?? {};
+  // TODO: fix this; fetch previous frame?
+  const { cpu: prevCpu = 0, mem: prevMem = 0 } = currentFrame?.budget ?? {};
 
-  const { cpu = 0, mem = 0 } = currentFrame?.budget ?? [];
+  const { cpu = 0, mem = 0 } = currentFrame?.budget ?? {};
 
   const { stepsDiff, memDiff } = useMemo(() => {
     return { stepsDiff: cpu - prevCpu, memDiff: mem - prevMem };
@@ -179,13 +183,13 @@ const Debugger: FC<IDebuggerProps> = ({
             <div className="overflow-hidden h-4 mb-1 text-xs flex relative">
               <div
                 style={{
-                  width: `${(currentFrameIndex / (frames.length - 1)) * 100}%`,
+                  width: `${(currentFrameIndex / (frameCount - 1)) * 100}%`,
                 }}
                 className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-lime-900 overflow-auto"
               />
             </div>
             <div className="text-xs absolute top-[33px] right-1/2 translate-x-1/2 text-lime-600">
-              Step {currentFrameIndex}/{frames.length - 1}
+              Step {currentFrameIndex}/{frameCount - 1}
             </div>
             <div className="flex justify-between">
               <div className="w-36">
@@ -198,13 +202,13 @@ const Debugger: FC<IDebuggerProps> = ({
                 Budget:
                 <div className="flex gap-2">
                   <span className="text-blue-600">
-                    {currentFrame.budget.cpu} steps
+                    {currentFrame?.budget.cpu} steps
                   </span>{" "}
                   {!!stepsDiff && `+(${stepsDiff})`}
                 </div>
                 <div className="flex gap-2">
                   <span className="text-blue-600">
-                    {currentFrame.budget.mem} mem
+                    {currentFrame?.budget.mem} mem
                   </span>
                   {!!memDiff && `+(${memDiff})`}
                 </div>
@@ -223,7 +227,7 @@ const Debugger: FC<IDebuggerProps> = ({
                 Term
               </h2>
               <div className="p-4 overflow-auto absolute inset-0">
-                <DisplayString string={currentFrame.term} />
+                <DisplayString string={currentFrame?.term} />
               </div>
             </div>
             <div className="relative">
@@ -233,7 +237,7 @@ const Debugger: FC<IDebuggerProps> = ({
               <div className="h-full grid grid-rows-2">
                 <div className="relative">
                   <div className="p-4 overflow-auto absolute inset-0">
-                    {currentFrame.context.map((c, i) => (
+                    {currentFrame?.context.map((c, i) => (
                       <div key={i}>
                         {i !== 0 && "->"} {c}
                       </div>
@@ -246,7 +250,7 @@ const Debugger: FC<IDebuggerProps> = ({
                   </h2>
                   <div className="relative h-full">
                     <div className="p-4 overflow-auto absolute inset-0">
-                      {currentFrame.env.map(({ name, value }, i) => (
+                      {currentFrame?.env.map(({ name, value }, i) => (
                         <div key={i}>
                           {name}: <DisplayString string={value} />
                         </div>
@@ -271,7 +275,7 @@ const Debugger: FC<IDebuggerProps> = ({
             Return Value
           </h2>
           <div className="px-4 pt-4 pb-6 h-[30rem] overflow-auto">
-            <DisplayString string={currentFrame.retValue} />
+            <DisplayString string={currentFrame?.retValue} />
           </div>
         </div>
         <DebuggerNavigation
