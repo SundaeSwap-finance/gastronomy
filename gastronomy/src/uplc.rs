@@ -11,18 +11,38 @@ use uplc::{
     parser, PlutusData,
 };
 
-pub fn parse_program(file: &Path) -> Result<Program<NamedDeBruijn>> {
-    let program: Program<NamedDeBruijn> =
-        if file.extension().and_then(OsStr::to_str) == Some("uplc") {
+pub enum FileType {
+    UPLC,
+    Flat,
+    Transaction,
+}
+
+pub fn identify_file_type(file: &Path) -> Result<FileType> {
+    let extension = file.extension().and_then(OsStr::to_str);
+    match extension {
+        Some("uplc") => Ok(FileType::UPLC),
+        Some("flat") => Ok(FileType::Flat),
+        Some("tx") => Ok(FileType::Transaction),
+        _ => Err(anyhow!("That extension is not supported.")),
+    }
+}
+
+pub fn parse_program(file: &Path) -> Result<Vec<Program<NamedDeBruijn>>> {
+    match identify_file_type(file)? {
+        FileType::UPLC => {
             let code = fs::read_to_string(file)?;
-            parser::program(&code).unwrap().try_into()?
-        } else if file.extension().and_then(OsStr::to_str) == Some("flat") {
+            let program = parser::program(&code).unwrap().try_into()?;
+            Ok(vec![program])
+        }
+        FileType::Flat => {
             let bytes = std::fs::read(file)?;
-            Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into()
-        } else {
-            return Err(anyhow!("That extension is not supported."));
-        };
-    Ok(program)
+            let program = Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into();
+            Ok(vec![program])
+        }
+        FileType::Transaction => {
+            todo!("transactions not implemented yet")
+        }
+    }
 }
 
 pub fn parse_parameter(index: usize, parameter: String) -> Result<PlutusData> {

@@ -29,7 +29,8 @@ fn main() -> Result<(), anyhow::Error> {
 
     match args.command {
         Some(Commands::Run { file, parameters }) => {
-            let raw_program = gastronomy::uplc::parse_program(&file)?;
+            let mut raw_programs = gastronomy::uplc::parse_program(&file)?;
+            let raw_program = raw_programs.remove(0);
             let arguments = parameters
                 .iter()
                 .enumerate()
