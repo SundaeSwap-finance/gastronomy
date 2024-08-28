@@ -42,7 +42,14 @@ pub struct ExBudget {
 
 impl ExecutionTrace {
     pub fn from_file(filename: &Path, parameters: &[String]) -> Result<Self> {
-        let states = crate::uplc::execute_program(filename, parameters)?;
+        let raw_program = crate::uplc::parse_program(filename)?;
+        let arguments = parameters
+            .iter()
+            .enumerate()
+            .map(|(index, param)| crate::uplc::parse_parameter(index, param.clone()))
+            .collect::<Result<Vec<_>>>()?;
+        let applied_program = crate::uplc::apply_parameters(raw_program, arguments)?;
+        let states = crate::uplc::execute_program(applied_program)?;
         let frames = parse_frames(&states);
         Ok(Self {
             identifier: Uuid::new_v4().to_string(),

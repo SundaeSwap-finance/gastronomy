@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use anyhow::Result;
 use app::App;
 use clap::{command, Parser, Subcommand};
 
@@ -28,7 +29,14 @@ fn main() -> Result<(), anyhow::Error> {
 
     match args.command {
         Some(Commands::Run { file, parameters }) => {
-            let states = gastronomy::uplc::execute_program(&file, &parameters)?;
+            let raw_program = gastronomy::uplc::parse_program(&file)?;
+            let arguments = parameters
+                .iter()
+                .enumerate()
+                .map(|(index, param)| gastronomy::uplc::parse_parameter(index, param.clone()))
+                .collect::<Result<Vec<_>>>()?;
+            let applied_program = gastronomy::uplc::apply_parameters(raw_program, arguments)?;
+            let states = gastronomy::uplc::execute_program(applied_program)?;
 
             let mut terminal = utils::init()?;
             let mut app = App {
