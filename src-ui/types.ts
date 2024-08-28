@@ -18,7 +18,7 @@ export interface IFrame {
 }
 
 export interface ITraceResponse {
-  identifier: string;
+  identifiers: string[];
 }
 
 export interface ISummaryResponse {

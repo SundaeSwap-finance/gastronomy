@@ -4,7 +4,7 @@ use serde::Serialize;
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateTraceResponse {
-    pub identifier: String,
+    pub identifiers: Vec<String>,
 }
 
 #[derive(Serialize)]

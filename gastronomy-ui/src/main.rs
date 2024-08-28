@@ -15,11 +15,6 @@ struct SessionState {
 }
 
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("{}, {}!", gastronomy::greeting(), name)
-}
-
-#[tauri::command]
 fn create_trace(
     file: &Path,
     parameters: Vec<String>,
@@ -28,7 +23,9 @@ fn create_trace(
     let trace = gastronomy::trace_execution(file, &parameters).map_err(InvokeError::from_anyhow)?;
     let identifier = trace.identifier.clone();
     state.traces.insert(identifier.clone(), trace);
-    Ok(CreateTraceResponse { identifier })
+    Ok(CreateTraceResponse {
+        identifiers: vec![identifier],
+    })
 }
 
 #[tauri::command]
@@ -67,7 +64,6 @@ fn main() {
             traces: DashMap::new(),
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             create_trace,
             get_trace_summary,
             get_frame

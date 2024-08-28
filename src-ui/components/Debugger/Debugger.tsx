@@ -34,7 +34,7 @@ const Debugger: FC<IDebuggerProps> = ({
 
   const currentFrame = frames[currentFrameIndex];
 
-  const handleQuite = useCallback(() => {
+  const handleQuit = useCallback(() => {
     onQuit();
     setFrames([]);
   }, [onQuit]);
@@ -67,10 +67,10 @@ const Debugger: FC<IDebuggerProps> = ({
       } else if (event.key === "p") {
         handlePrevious();
       } else if (event.key === "q") {
-        handleQuite();
+        handleQuit();
       }
     },
-    [handleNext, handlePrevious, handleQuite]
+    [handleNext, handlePrevious, handleQuit],
   );
 
   useEffect(() => {
@@ -82,27 +82,28 @@ const Debugger: FC<IDebuggerProps> = ({
 
   const fetchFrames = useCallback(async () => {
     try {
-      const { identifier } = await invoke<ITraceResponse>("create_trace", {
+      const { identifiers } = await invoke<ITraceResponse>("create_trace", {
         file,
         parameters,
       });
+      const identifier = identifiers[0];
 
       const { frameCount } = await invoke<ISummaryResponse>(
         "get_trace_summary",
         {
           identifier,
-        }
+        },
       );
 
       const framePromises = Array.from({ length: frameCount }, (_, i) =>
         invoke<IFrameResponse>("get_frame", {
           identifier,
           frame: i,
-        })
+        }),
       );
 
       const frames: IFrame[] = await Promise.all(
-        framePromises.map((p) => p.then((res) => res.frame))
+        framePromises.map((p) => p.then((res) => res.frame)),
       );
       setFrames(frames);
     } catch (error) {
@@ -156,7 +157,7 @@ const Debugger: FC<IDebuggerProps> = ({
           <button
             className={cx(
               "py-2 px-6 text-lime-600 border border-lime-600 transition-colors",
-              "hover:bg-lime-600 hover:text-slate-950 duration-300 ease-in-out"
+              "hover:bg-lime-600 hover:text-slate-950 duration-300 ease-in-out",
             )}
             onClick={onQuit}
           >
@@ -262,7 +263,7 @@ const Debugger: FC<IDebuggerProps> = ({
         className="absolute right-1/2 translate-x-1/2 bottom-1"
         handleNext={handleNext}
         handlePrevious={handlePrevious}
-        handleQuite={handleQuite}
+        handleQuite={handleQuit}
       />
       <Modal isOpen={isModalOpen}>
         <div className="">
@@ -277,7 +278,7 @@ const Debugger: FC<IDebuggerProps> = ({
           className="absolute right-1/2 translate-x-1/2 -bottom-2"
           handleNext={handleNext}
           handlePrevious={handlePrevious}
-          handleQuite={handleQuite}
+          handleQuite={handleQuit}
         />
       </Modal>
     </div>
