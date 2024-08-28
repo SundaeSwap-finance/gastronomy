@@ -42,7 +42,7 @@ pub struct ExBudget {
 
 impl ExecutionTrace {
     pub fn from_file(filename: &Path, parameters: &[String]) -> Result<Self> {
-        let mut raw_programs = crate::uplc::parse_program(filename)?;
+        let mut raw_programs = crate::uplc::load_programs_from_file(filename)?;
         let raw_program = raw_programs.remove(0);
         let arguments = parameters
             .iter()

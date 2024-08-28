@@ -27,7 +27,7 @@ pub fn identify_file_type(file: &Path) -> Result<FileType> {
     }
 }
 
-pub fn parse_program(file: &Path) -> Result<Vec<Program<NamedDeBruijn>>> {
+pub fn load_programs_from_file(file: &Path) -> Result<Vec<Program<NamedDeBruijn>>> {
     match identify_file_type(file)? {
         FileType::UPLC => {
             let code = fs::read_to_string(file)?;
