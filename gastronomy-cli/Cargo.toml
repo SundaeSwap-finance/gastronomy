@@ -12,7 +12,7 @@ publish = false
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 gastronomy = { path = "../gastronomy" }
-uplc = { git="https://github.com/SundaeSwap-finance/aiken.git", rev = "68965b52" }
+uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "e5a60f3" }
 # uplc = { path = "../aiken/crates/uplc" }
 ratatui = { version = "0.26", features = ["all-widgets"] }
 crossterm = "0.27"

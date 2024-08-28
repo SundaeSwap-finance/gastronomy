@@ -9,10 +9,10 @@ publish = false
 
 [dependencies]
 anyhow = "1"
-uplc = { git="https://github.com/SundaeSwap-finance/aiken.git", rev = "68965b52" }
+uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "e5a60f3" }
 # uplc = { path = "../aiken/crates/uplc" }
 num-bigint = "0.4"
-pallas = "0.22"
+pallas = "0.30.1"
 serde = "1"
 uuid = { version = "1", features = ["v4"] }
 # pretty = "0.12.3"
