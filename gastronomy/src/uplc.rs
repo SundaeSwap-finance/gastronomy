@@ -1,10 +1,7 @@
 use std::{ffi::OsStr, fs, path::Path};
 
 use anyhow::{anyhow, Context, Result};
-use pallas::ledger::{
-    primitives::conway::{CostMdls, Language, MintedTx, TransactionOutput},
-    traverse::{Era, MultiEraTx},
-};
+use pallas::ledger::primitives::conway::{Language, MintedTx, TransactionOutput};
 use uplc::{
     ast::{FakeNamedDeBruijn, NamedDeBruijn, Program},
     machine::{

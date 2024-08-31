@@ -16,18 +16,19 @@ dashmap = "6"
 gastronomy = { path = "../gastronomy" }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.7.0", features = [ "dialog-open"] }
+tauri = { version = "1.7.0", features = ["dialog-open"] }
+tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
 # If you use cargo directly instead of tauri's cli you can use this feature flag to switch between tauri's `dev` and `build` modes.
 # DO NOT REMOVE!!
-custom-protocol = [ "tauri/custom-protocol" ]
+custom-protocol = ["tauri/custom-protocol"]
 
 [package.metadata.dist]
 dist = false
 
 [package.metadata.release]
 pre-release-replacements = [
-  {file="tauri.conf.json", search="\"version\": \".*\"", replace="\"version\": \"{{version}}\""},
+    { file = "tauri.conf.json", search = "\"version\": \".*\"", replace = "\"version\": \"{{version}}\"" },
 ]

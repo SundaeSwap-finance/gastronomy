@@ -150,5 +150,5 @@ fn parse_env(env: &[uplc::machine::value::Value]) -> Vec<EnvVar> {
 }
 
 fn parse_uplc_value(value: uplc::machine::value::Value) -> Value {
-    uplc::machine::discharge::value_as_term(value.clone()).to_string()
+    uplc::machine::discharge::value_as_term(value).to_string()
 }

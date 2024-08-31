@@ -1,12 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use api::{CreateTraceResponse, GetFrameResponse, GetTraceSummaryResponse};
 use dashmap::DashMap;
 use gastronomy::ExecutionTrace;
-use tauri::{InvokeError, State};
+use tauri::{InvokeError, Manager, State, Wry};
+use tauri_plugin_store::{with_store, StoreBuilder, StoreCollection};
 
 mod api;
 
@@ -60,6 +61,25 @@ fn get_frame(
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .setup(|app| {
+            let mut store = StoreBuilder::new(app.handle(), "settings.json".parse()?).build();
+            let _ = store.load();
+            let stores = app.state::<StoreCollection<Wry>>();
+            let path = PathBuf::from("settings.json");
+
+            with_store(app.app_handle(), stores, path, |store| {
+                let key: String = store
+                    .get("blockfrost.key")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.to_string())
+                    .unwrap_or_default();
+                println!("Blockfrost key: {}", key);
+                Ok(())
+            })?;
+
+            Ok(())
+        })
         .manage(SessionState {
             traces: DashMap::new(),
         })
