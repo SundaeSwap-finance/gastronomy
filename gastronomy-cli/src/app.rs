@@ -52,7 +52,7 @@ impl App {
                     }
                     KeyCode::Char('N') | KeyCode::Char('n') | KeyCode::Right => {
                         let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
-                            5
+                            50
                         } else {
                             1
                         };
@@ -65,7 +65,7 @@ impl App {
                     }
                     KeyCode::Char('P') | KeyCode::Char('p') | KeyCode::Left => {
                         let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
-                            5
+                            50
                         } else {
                             1
                         };

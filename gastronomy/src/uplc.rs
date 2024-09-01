@@ -3,7 +3,7 @@ use std::{ffi::OsStr, fs, path::Path};
 use anyhow::{anyhow, Context, Result};
 use pallas::ledger::primitives::conway::{Language, MintedTx};
 use uplc::{
-    ast::{FakeNamedDeBruijn, NamedDeBruijn, Program},
+    ast::{FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     machine::{
         cost_model::{CostModel, ExBudget},
         Machine, MachineState,
@@ -131,9 +131,13 @@ pub fn execute_program(program: Program<NamedDeBruijn>) -> Result<Vec<(MachineSt
         .map_err(|err| anyhow!("could not get initial state: {}", err))?;
     let mut states = vec![(state.clone(), machine.ex_budget)];
     while !matches!(state, MachineState::Done(_)) {
-        state = machine
-            .step(state)
-            .map_err(|err| anyhow!("could not evaluate state: {}", err))?;
+        state = match machine.step(state) {
+            Ok(state) => state,
+            Err(err) => {
+                eprintln!("Machine Error: {}", err);
+                MachineState::Done(Term::Error)
+            }
+        };
         states.push((state.clone(), machine.ex_budget));
     }
 
