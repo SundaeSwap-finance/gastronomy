@@ -5,6 +5,8 @@ use serde::Serialize;
 use uplc::machine::{Context, MachineState};
 use uuid::Uuid;
 
+use crate::chain_query::ChainQuery;
+
 pub type Value = String;
 
 #[derive(Serialize)]
@@ -41,22 +43,33 @@ pub struct ExBudget {
 }
 
 impl ExecutionTrace {
-    pub fn from_file(filename: &Path, parameters: &[String]) -> Result<Self> {
-        let mut raw_programs = crate::uplc::load_programs_from_file(filename)?;
-        let raw_program = raw_programs.remove(0);
-        let arguments = parameters
-            .iter()
-            .enumerate()
-            .map(|(index, param)| crate::uplc::parse_parameter(index, param.clone()))
-            .collect::<Result<Vec<_>>>()?;
-        let applied_program = crate::uplc::apply_parameters(raw_program, arguments)?;
-        let states = crate::uplc::execute_program(applied_program)?;
-        let frames = parse_frames(&states);
-        Ok(Self {
-            identifier: Uuid::new_v4().to_string(),
-            filename: filename.display().to_string(),
-            frames,
-        })
+    pub async fn from_file(
+        filename: &Path,
+        parameters: &[String],
+        query: impl ChainQuery,
+    ) -> Result<Vec<Self>> {
+        println!("from file");
+        let raw_programs = crate::uplc::load_programs_from_file(filename, query).await?;
+        let mut execution_traces = vec![];
+
+        println!("{} programs", raw_programs.len());
+        for raw_program in raw_programs {
+            let arguments = parameters
+                .iter()
+                .enumerate()
+                .map(|(index, param)| crate::uplc::parse_parameter(index, param.clone()))
+                .collect::<Result<Vec<_>>>()?;
+            let applied_program = crate::uplc::apply_parameters(raw_program, arguments)?;
+            let states = crate::uplc::execute_program(applied_program)?;
+            // let frames = parse_frames(&states);
+            execution_traces.push(Self {
+                identifier: Uuid::new_v4().to_string(),
+                filename: filename.display().to_string(),
+                frames: vec![],
+            })
+        }
+        println!("Done");
+        Ok(execution_traces)
     }
 }
 

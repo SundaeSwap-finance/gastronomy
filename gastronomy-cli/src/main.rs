@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use app::App;
 use clap::{command, Parser, Subcommand};
+use gastronomy::chain_query::{Blockfrost, None};
 
 mod app;
 mod utils;
@@ -12,6 +13,8 @@ mod utils;
 struct Args {
     #[command(subcommand)]
     command: Option<Commands>,
+    #[clap(env)]
+    blockfrost: String,
 }
 
 #[derive(Subcommand, Debug)]
@@ -19,18 +22,33 @@ enum Commands {
     Run {
         file: PathBuf,
         parameters: Vec<String>,
+        #[clap(long)]
+        index: Option<usize>,
     },
 }
 
-fn main() -> Result<(), anyhow::Error> {
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
     utils::install_hooks().unwrap();
 
     let args = Args::parse();
 
     match args.command {
-        Some(Commands::Run { file, parameters }) => {
-            let mut raw_programs = gastronomy::uplc::load_programs_from_file(&file)?;
-            let raw_program = raw_programs.remove(0);
+        Some(Commands::Run {
+            file,
+            parameters,
+            index,
+        }) => {
+            let mut raw_programs = if args.blockfrost.is_empty() {
+                gastronomy::uplc::load_programs_from_file(&file, None {}).await?
+            } else {
+                gastronomy::uplc::load_programs_from_file(
+                    &file,
+                    Blockfrost::new(args.blockfrost.as_str()),
+                )
+                .await?
+            };
+            let raw_program = raw_programs.remove(index.unwrap_or_default());
             let arguments = parameters
                 .iter()
                 .enumerate()

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use api::{CreateTraceResponse, GetFrameResponse, GetTraceSummaryResponse};
 use dashmap::DashMap;
-use gastronomy::ExecutionTrace;
+use gastronomy::{chain_query::Blockfrost, ExecutionTrace};
 use tauri::{InvokeError, Manager, State, Wry};
 use tauri_plugin_store::{with_store, StoreBuilder, StoreCollection};
 
@@ -16,17 +16,34 @@ struct SessionState {
 }
 
 #[tauri::command]
-fn create_trace(
+async fn create_traces<'a>(
     file: &Path,
     parameters: Vec<String>,
-    state: State<SessionState>,
+    state: State<'a, SessionState>,
+    app_handle: tauri::AppHandle,
+    stores: State<'a, StoreCollection<Wry>>,
 ) -> Result<api::CreateTraceResponse, InvokeError> {
-    let trace = gastronomy::trace_execution(file, &parameters).map_err(InvokeError::from_anyhow)?;
-    let identifier = trace.identifier.clone();
-    state.traces.insert(identifier.clone(), trace);
-    Ok(CreateTraceResponse {
-        identifiers: vec![identifier],
-    })
+    println!("Creating traces {:?} {:?}", file, parameters);
+    let path = PathBuf::from("settings.json");
+
+    let key = with_store(app_handle, stores, path, |store| {
+        let key: String = store
+            .get("blockfrost.key")
+            .and_then(|v| v.as_str())
+            .map(|v| v.to_string())
+            .unwrap_or_default();
+        Ok(key)
+    })?;
+    let mut traces = gastronomy::trace_executions(file, &parameters, Blockfrost::new(key.as_str()))
+        .await
+        .unwrap();
+    let mut identifiers = vec![];
+    for trace in traces.drain(..) {
+        let identifier = trace.identifier.clone();
+        state.traces.insert(identifier.clone(), trace);
+        identifiers.push(identifier);
+    }
+    Ok(CreateTraceResponse { identifiers })
 }
 
 #[tauri::command]
@@ -34,6 +51,7 @@ fn get_trace_summary(
     identifier: &str,
     state: State<SessionState>,
 ) -> Result<api::GetTraceSummaryResponse, InvokeError> {
+    println!("Getting summary");
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
@@ -48,6 +66,7 @@ fn get_frame(
     frame: usize,
     state: State<SessionState>,
 ) -> Result<api::GetFrameResponse, InvokeError> {
+    println!("Getting frame");
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
@@ -84,7 +103,7 @@ fn main() {
             traces: DashMap::new(),
         })
         .invoke_handler(tauri::generate_handler![
-            create_trace,
+            create_traces,
             get_trace_summary,
             get_frame
         ])

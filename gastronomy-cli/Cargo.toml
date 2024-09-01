@@ -10,7 +10,8 @@ publish = false
 
 [dependencies]
 anyhow = "1"
-clap = { version = "4", features = ["derive"] }
+tokio = { version = "1.40", features = ["full"] }
+clap = { version = "4", features = ["derive", "env"] }
 gastronomy = { path = "../gastronomy" }
 uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "e5a60f3" }
 # uplc = { path = "../aiken/crates/uplc" }

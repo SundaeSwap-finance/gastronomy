@@ -96,10 +96,15 @@ const Debugger: FC<IDebuggerProps> = ({
 
   const fetchFrames = useCallback(async () => {
     try {
-      const { identifiers } = await invoke<ITraceResponse>("create_trace", {
+      if (isLoading) {
+        return;
+      }
+      setIsLoading(true);
+      const { identifiers } = await invoke<ITraceResponse>("create_traces", {
         file,
         parameters,
       });
+      console.log(identifiers);
       const identifier = identifiers[0];
       setIdentifier(identifier);
 
