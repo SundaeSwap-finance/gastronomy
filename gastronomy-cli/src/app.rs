@@ -50,16 +50,30 @@ impl App {
                     KeyCode::Char('q') => {
                         self.exit = true;
                     }
-                    KeyCode::Char('n') => {
-                        let next = self.cursor + 1;
+                    KeyCode::Char('N') | KeyCode::Char('n') | KeyCode::Right => {
+                        let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
+                            5
+                        } else {
+                            1
+                        };
+                        let next = self.cursor + stride;
                         self.cursor = if next < self.states.len() {
                             next
                         } else {
                             self.states.len() - 1
                         };
                     }
-                    KeyCode::Char('p') => {
-                        let prev = if self.cursor > 0 { self.cursor - 1 } else { 0 };
+                    KeyCode::Char('P') | KeyCode::Char('p') | KeyCode::Left => {
+                        let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
+                            5
+                        } else {
+                            1
+                        };
+                        let prev = if self.cursor > 0 {
+                            self.cursor - stride
+                        } else {
+                            0
+                        };
                         self.cursor = prev;
                     }
                     KeyCode::Tab => match self.focus.as_str() {
