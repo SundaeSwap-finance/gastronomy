@@ -16,6 +16,7 @@ use uplc::{
     Fragment, Hash, KeyValuePairs, PlutusData, TransactionInput, Value,
 };
 
+#[allow(async_fn_in_trait)]
 pub trait ChainQuery {
     async fn get_tx_bytes(&self, tx_id: Hash<32>) -> Result<Bytes>;
     async fn get_utxos(&self, tx_ref: Vec<TransactionInput>) -> Result<Vec<ResolvedInput>>;

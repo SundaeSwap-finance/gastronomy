@@ -29,7 +29,6 @@ const Debugger: FC<IDebuggerProps> = ({
   const [identifier, setIdentifier] = useState<string | undefined>(undefined);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [frameCount, setFrameCount] = useState<number>(0);
   const [currentFrame, setCurrentFrame] = useState<IFrame | undefined>(
@@ -94,36 +93,32 @@ const Debugger: FC<IDebuggerProps> = ({
     };
   }, [handleKeyPress]);
 
-  const fetchFrames = useCallback(async () => {
-    try {
-      if (isLoading) {
-        return;
-      }
-      setIsLoading(true);
-      const { identifiers } = await invoke<ITraceResponse>("create_traces", {
-        file,
-        parameters,
-      });
-      console.log(identifiers);
-      const identifier = identifiers[0];
-      setIdentifier(identifier);
+  const fetchFrames = useCallback(
+    async (file: string, parameters: string[]) => {
+      try {
+        const { identifiers } = await invoke<ITraceResponse>("create_traces", {
+          file,
+          parameters,
+        });
+        const identifier = identifiers[0];
+        setIdentifier(identifier);
 
-      const { frameCount } = await invoke<ISummaryResponse>(
-        "get_trace_summary",
-        {
-          identifier,
-        },
-      );
-      setFrameCount(frameCount);
-    } catch (error) {
-      setError(error as string);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [file, parameters]);
+        const { frameCount } = await invoke<ISummaryResponse>(
+          "get_trace_summary",
+          {
+            identifier,
+          },
+        );
+        setFrameCount(frameCount);
+      } catch (error) {
+        setError(error as string);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    fetchFrames();
+    fetchFrames(file, parameters);
   }, [fetchFrames, file, parameters]);
 
   useEffect(() => {
@@ -141,7 +136,7 @@ const Debugger: FC<IDebuggerProps> = ({
     return { stepsDiff: cpu - prevCpu, memDiff: mem - prevMem };
   }, [cpu, mem, prevCpu, prevMem]);
 
-  if (isLoading) {
+  if (!identifier) {
     return (
       <div className="h-svh flex items-center justify-center">
         <Triangle

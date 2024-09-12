@@ -52,7 +52,7 @@ impl ExecutionTrace {
         let raw_programs = crate::uplc::load_programs_from_file(filename, query).await?;
         let mut execution_traces = vec![];
 
-        println!("{} programs", raw_programs.len());
+        println!("{} program(s)", raw_programs.len());
         for raw_program in raw_programs {
             let arguments = parameters
                 .iter()
@@ -61,11 +61,11 @@ impl ExecutionTrace {
                 .collect::<Result<Vec<_>>>()?;
             let applied_program = crate::uplc::apply_parameters(raw_program, arguments)?;
             let states = crate::uplc::execute_program(applied_program)?;
-            // let frames = parse_frames(&states);
+            let frames = parse_frames(&states);
             execution_traces.push(Self {
                 identifier: Uuid::new_v4().to_string(),
                 filename: filename.display().to_string(),
-                frames: vec![],
+                frames,
             })
         }
         println!("Done");

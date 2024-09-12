@@ -63,12 +63,11 @@ function App() {
                 try {
                   await store.set("blockfrost.key", event.target.value);
                   await store.save();
-                  console.log("Saved");
                 } catch (e) {
                   console.error(e);
                 }
               }}
-            ></input>
+            />
             <FilePicker setFile={setFile} fileName={fileName} />
             <div className="flex flex-col gap-4">
               <label htmlFor="parameters" className="cursor-pointer">

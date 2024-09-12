@@ -14,7 +14,7 @@ const Modal: FC<ModalProps> = ({ isOpen, children }) => {
       <div className="bg-slate-950 rounded z-10 border border-lime-600 relative w-[50rem] max-w-full">
         {children}
       </div>
-    </div> 
+    </div>
   );
 };
 
