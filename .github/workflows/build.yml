@@ -31,3 +31,19 @@ jobs:
           components: rustfmt
       - name: Rustfmt Check
         uses: actions-rust-lang/rustfmt@v1
+
+  eslint:
+    name: yarn lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22
+      - uses: borales/actions-yarn@v4
+        with:
+          cmd: install
+      - name: Eslint check
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: lint
