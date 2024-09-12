@@ -1,4 +1,4 @@
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api";
 import cx from "classnames";
 import {
@@ -127,14 +127,7 @@ const Debugger: FC<IDebuggerProps> = ({
     }
   }, [currentFrame?.retValue]);
 
-  // TODO: fix this; fetch previous frame?
-  const { cpu: prevCpu = 0, mem: prevMem = 0 } = currentFrame?.budget ?? {};
-
-  const { cpu = 0, mem = 0 } = currentFrame?.budget ?? {};
-
-  const { stepsDiff, memDiff } = useMemo(() => {
-    return { stepsDiff: cpu - prevCpu, memDiff: mem - prevMem };
-  }, [cpu, mem, prevCpu, prevMem]);
+  const { stepsDiff = 0, memDiff = 0 } = currentFrame?.budget ?? {};
 
   if (!identifier) {
     return (
@@ -202,7 +195,7 @@ const Debugger: FC<IDebuggerProps> = ({
                 Budget:
                 <div className="flex gap-2">
                   <span className="text-blue-600">
-                    {currentFrame?.budget.cpu} steps
+                    {currentFrame?.budget.steps} steps
                   </span>{" "}
                   {!!stepsDiff && `+(${stepsDiff})`}
                 </div>

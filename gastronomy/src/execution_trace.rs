@@ -38,8 +38,10 @@ pub struct EnvVar {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExBudget {
-    pub cpu: i64,
+    pub steps: i64,
     pub mem: i64,
+    pub steps_diff: i64,
+    pub mem_diff: i64,
 }
 
 impl ExecutionTrace {
@@ -78,6 +80,8 @@ const MAX_MEM: i64 = 14000000;
 
 fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) -> Vec<Frame> {
     let mut frames = vec![];
+    let mut prev_steps = 0;
+    let mut prev_mem = 0;
     for (state, budget) in states {
         let (label, context, env, term, ret_value) = match state {
             MachineState::Compute(context, env, term) => (
@@ -109,6 +113,8 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
                 )
             }
         };
+        let steps = MAX_CPU - budget.cpu;
+        let mem = MAX_MEM - budget.mem;
         frames.push(Frame {
             label: label.to_string(),
             context,
@@ -116,10 +122,14 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
             term,
             ret_value,
             budget: ExBudget {
-                cpu: MAX_CPU - budget.cpu,
-                mem: MAX_MEM - budget.mem,
+                steps,
+                mem,
+                steps_diff: steps - prev_steps,
+                mem_diff: mem - prev_mem,
             },
-        })
+        });
+        prev_steps = steps;
+        prev_mem = mem;
     }
     frames
 }

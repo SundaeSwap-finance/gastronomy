@@ -1,6 +1,8 @@
 interface IBudget {
-  cpu: number;
+  steps: number;
   mem: number;
+  stepsDiff: number;
+  memDiff: number;
 }
 
 interface IEnv {
