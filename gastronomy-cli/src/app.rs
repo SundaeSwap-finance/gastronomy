@@ -38,7 +38,7 @@ impl App {
     }
 
     fn render_frame(&mut self, frame: &mut Frame) {
-        frame.render_widget(self, frame.size());
+        frame.render_widget(self, frame.area());
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -197,7 +197,7 @@ fn render_block_region(file_name: PathBuf, area: Rect, buf: &mut Buffer) -> Rc<[
         .title(
             instructions
                 .alignment(Alignment::Center)
-                .position(Position::Bottom),
+                .position(block::Position::Bottom),
         )
         .borders(Borders::ALL)
         .border_set(border::THICK);
