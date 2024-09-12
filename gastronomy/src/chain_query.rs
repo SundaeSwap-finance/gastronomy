@@ -74,17 +74,17 @@ impl ChainQuery for Blockfrost {
                 .transactions_utxos(hex::encode(input.transaction_id).as_str())
                 .await?;
             let output = tx.outputs[input.index as usize].clone();
-            let datum = if let Some(datum) = output.inline_datum {
-                Some(DatumOption::Data(CborWrap(
+            let datum = match (output.inline_datum, output.data_hash) {
+                (Some(datum), _) => Some(DatumOption::Data(CborWrap(
                     hex::decode(datum)
                         .ok()
                         .and_then(|d| PlutusData::decode_fragment(&d).ok())
                         .unwrap(),
-                )))
-            } else if let Some(hash) = output.data_hash {
-                Some(DatumOption::Hash(hex::decode(hash).unwrap()[..].into()))
-            } else {
-                None
+                ))),
+                (None, Some(hash)) => {
+                    Some(DatumOption::Hash(hex::decode(hash).unwrap()[..].into()))
+                }
+                (None, None) => None,
             };
             let mut value: Value = pallas::applying::utils::empty_value();
             for asset in output.amount.iter() {
@@ -96,10 +96,8 @@ impl ChainQuery for Blockfrost {
                     )
                     .unwrap();
                 } else {
-                    let policy: Hash<28> =
-                        hex::decode(asset.unit[0..56].to_string()).unwrap()[..].into();
-                    let asset_name: Bytes =
-                        hex::decode(asset.unit[56..].to_string()).unwrap().into();
+                    let policy: Hash<28> = hex::decode(&asset.unit[0..56]).unwrap()[..].into();
+                    let asset_name: Bytes = hex::decode(&asset.unit[56..]).unwrap().into();
                     let amount: u64 = asset.quantity.parse().unwrap();
                     let asset_amt = KeyValuePairs::Def(vec![(asset_name, amount)]);
                     let multiasset = KeyValuePairs::Def(vec![(policy, asset_amt)]);
@@ -120,7 +118,7 @@ impl ChainQuery for Blockfrost {
                             .iter()
                             .map(|(k, v)| {
                                 (
-                                    k.clone(),
+                                    *k,
                                     NonEmptyKeyValuePairs::Def(
                                         v.iter()
                                             .map(|(k, v)| {

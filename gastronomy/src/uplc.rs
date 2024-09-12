@@ -66,8 +66,8 @@ pub async fn load_programs_from_file(
     }
 }
 
-pub async fn load_programs_from_tx<'a>(
-    tx: MintedTx<'a>,
+pub async fn load_programs_from_tx(
+    tx: MintedTx<'_>,
     query: impl ChainQuery,
 ) -> Result<Vec<Program<NamedDeBruijn>>> {
     println!("loading programs from tx");
@@ -113,8 +113,8 @@ pub fn apply_parameters(
     parameters: Vec<PlutusData>,
 ) -> Result<Program<NamedDeBruijn>> {
     let mut program = program;
-    for (_, param) in parameters.iter().enumerate() {
-        program = program.apply_data(param.clone());
+    for param in parameters {
+        program = program.apply_data(param);
     }
     Ok(program)
 }

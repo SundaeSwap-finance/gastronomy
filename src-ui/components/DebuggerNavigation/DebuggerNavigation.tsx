@@ -1,14 +1,14 @@
 import { FC } from "react";
 import cx from "classnames";
 
-interface DebuggerNavigationProps {
+interface IDebuggerNavigationProps {
   className?: string;
   handleNext: () => void;
   handlePrevious: () => void;
   handleQuite: () => void;
 }
 
-const DebuggerNavigation: FC<DebuggerNavigationProps> = ({
+const DebuggerNavigation: FC<IDebuggerNavigationProps> = ({
   className,
   handleNext,
   handlePrevious,
