@@ -70,13 +70,50 @@ trait ChainQueryImpl {
 
 pub struct Blockfrost {
     api_key: String,
+    environment: Environment,
     api: BlockfrostAPI,
+}
+
+enum Environment {
+    Preview,
+    Preprod,
+    Mainnet,
+}
+
+impl Environment {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Preview => "preview",
+            Self::Preprod => "preprod",
+            Self::Mainnet => "mainnet",
+        }
+    }
+    fn slot_config(&self) -> SlotConfig {
+        let (zero_time, zero_slot) = match self {
+            Self::Preview => (1660003200000, 0),
+            Self::Preprod => (1655683200000, 0),
+            Self::Mainnet => (1596059091000, 4492800),
+        };
+        SlotConfig {
+            slot_length: 1000,
+            zero_slot,
+            zero_time,
+        }
+    }
 }
 
 impl Blockfrost {
     pub fn new(config: &BlockfrostConfig) -> Self {
+        let environment = if config.key.starts_with("preview") {
+            Environment::Preview
+        } else if config.key.starts_with("preprod") {
+            Environment::Preprod
+        } else {
+            Environment::Mainnet
+        };
         Blockfrost {
             api_key: config.key.to_string(),
+            environment,
             api: BlockfrostAPI::new(&config.key, Default::default()),
         }
     }
@@ -88,7 +125,8 @@ impl ChainQueryImpl for Blockfrost {
         let tx_id = hex::encode(tx_id);
         let response = client
             .get(format!(
-                "https://cardano-preview.blockfrost.io/api/v0/txs/{}/cbor",
+                "https://cardano-{}.blockfrost.io/api/v0/txs/{}/cbor",
+                self.environment.as_str(),
                 tx_id
             ))
             .header("project_id", self.api_key.as_str())
@@ -190,10 +228,6 @@ impl ChainQueryImpl for Blockfrost {
         Ok(resolved_inputs)
     }
     fn get_slot_config(&self) -> Result<SlotConfig> {
-        Ok(SlotConfig {
-            zero_time: 1660003200000, // Preview network
-            zero_slot: 0,
-            slot_length: 1000,
-        })
+        Ok(self.environment.slot_config())
     }
 }
