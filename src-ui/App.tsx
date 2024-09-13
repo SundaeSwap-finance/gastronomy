@@ -5,12 +5,13 @@ import cx from "classnames";
 import gastronomyLogo from "./assets/images/gastronomy-logo.svg";
 import sundaeLogo from "./assets/images/sundae-logo.svg";
 import { Store } from "tauri-plugin-store-api";
+import { ISettings } from "./types";
 
 function App() {
   const [displayDebugger, setDisplayDebugger] = useState(false);
   const [parameters, setParameters] = useState<string[]>([]);
   const [file, setFile] = useState("");
-  const [key, setKey] = useState(undefined as string | undefined);
+  const [config, setConfig] = useState<ISettings | undefined>();
 
   const store = useMemo(() => {
     return new Store("settings.json");
@@ -18,8 +19,8 @@ function App() {
 
   useEffect(() => {
     (async () => {
-      const data = (await store.get<string>("blockfrost.key")) ?? undefined;
-      setKey(data);
+      const data = (await store.get<ISettings>("config")) ?? undefined;
+      setConfig(data);
     })();
   }, [store]);
 
@@ -57,11 +58,19 @@ function App() {
             <input
               type="text"
               placeholder="Blockfrost API Key"
-              value={key}
-              onChange={(event) => setKey(event.target.value)}
-              onBlur={async (event) => {
+              value={config?.blockfrost?.key}
+              onChange={(event) => {
+                const key = event.target.value;
+                const newBlockfrost = key ? { key } : undefined;
+                const newConfig = {
+                  ...config,
+                  blockfrost: newBlockfrost,
+                };
+                setConfig(newConfig);
+              }}
+              onBlur={async () => {
                 try {
-                  await store.set("blockfrost.key", event.target.value);
+                  await store.set("config", config);
                   await store.save();
                 } catch (e) {
                   console.error(e);

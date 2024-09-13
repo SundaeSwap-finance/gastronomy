@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use blockfrost::{BlockfrostAPI, JsonValue};
 use pallas::{
     applying::utils::{add_values, AlonzoError, ValidationError},
@@ -16,24 +16,56 @@ use uplc::{
     Fragment, Hash, KeyValuePairs, PlutusData, TransactionInput, Value,
 };
 
-#[allow(async_fn_in_trait)]
-pub trait ChainQuery {
+use crate::config::BlockfrostConfig;
+
+pub enum ChainQuery {
+    Blockfrost(Blockfrost),
+    None,
+}
+
+impl ChainQuery {
+    pub fn blockfrost(config: &BlockfrostConfig) -> Self {
+        Self::Blockfrost(Blockfrost::new(config))
+    }
+
+    pub async fn get_tx_bytes(&self, tx_id: Hash<32>) -> Result<Bytes> {
+        match self {
+            Self::Blockfrost(blockfrost) => blockfrost.get_tx_bytes(tx_id).await,
+            Self::None => {
+                bail!("No chain query provider configured, consider adding a blockfrost API key")
+            }
+        }
+    }
+
+    pub async fn get_utxos(&self, tx_ref: Vec<TransactionInput>) -> Result<Vec<ResolvedInput>> {
+        match self {
+            Self::Blockfrost(blockfrost) => blockfrost.get_utxos(tx_ref).await,
+            Self::None => {
+                bail!("No chain query provider configured, consider adding a blockfrost API key")
+            }
+        }
+    }
+
+    pub fn get_slot_config(&self) -> Result<SlotConfig> {
+        match self {
+            Self::Blockfrost(blockfrost) => blockfrost.get_slot_config(),
+            Self::None => {
+                bail!("No chain query provider configured, consider adding a blockfrost API key")
+            }
+        }
+    }
+}
+
+impl Default for ChainQuery {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+trait ChainQueryImpl {
     async fn get_tx_bytes(&self, tx_id: Hash<32>) -> Result<Bytes>;
     async fn get_utxos(&self, tx_ref: Vec<TransactionInput>) -> Result<Vec<ResolvedInput>>;
     fn get_slot_config(&self) -> Result<SlotConfig>;
-}
-
-pub struct None {}
-impl ChainQuery for None {
-    async fn get_tx_bytes(&self, _tx_id: Hash<32>) -> Result<Bytes> {
-        unimplemented!("No chain query provider conigured, consider adding a blockfrost API key")
-    }
-    async fn get_utxos(&self, _tx_refs: Vec<TransactionInput>) -> Result<Vec<ResolvedInput>> {
-        unimplemented!("No chain query provider conigured, consider adding a blockfrost API key")
-    }
-    fn get_slot_config(&self) -> Result<SlotConfig> {
-        unimplemented!("No chain query provider conigured, consider adding a blockfrost API key")
-    }
 }
 
 pub struct Blockfrost {
@@ -42,15 +74,15 @@ pub struct Blockfrost {
 }
 
 impl Blockfrost {
-    pub fn new(api_key: &str) -> Self {
+    pub fn new(config: &BlockfrostConfig) -> Self {
         Blockfrost {
-            api_key: api_key.to_string(),
-            api: BlockfrostAPI::new(api_key, Default::default()),
+            api_key: config.key.to_string(),
+            api: BlockfrostAPI::new(&config.key, Default::default()),
         }
     }
 }
 
-impl ChainQuery for Blockfrost {
+impl ChainQueryImpl for Blockfrost {
     async fn get_tx_bytes(&self, tx_id: Hash<32>) -> Result<Bytes> {
         let client = reqwest::Client::new();
         let tx_id = hex::encode(tx_id);

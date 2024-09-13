@@ -30,3 +30,11 @@ export interface ISummaryResponse {
 export interface IFrameResponse {
   frame: IFrame;
 }
+
+export interface IBlockfrostSettings {
+  key: string;
+}
+
+export interface ISettings {
+  blockfrost?: IBlockfrostSettings;
+}

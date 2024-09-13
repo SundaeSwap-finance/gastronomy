@@ -39,7 +39,7 @@ pub fn identify_file_type(file: &Path) -> Result<FileType> {
 
 pub async fn load_programs_from_file(
     file: &Path,
-    query: impl ChainQuery,
+    query: ChainQuery,
 ) -> Result<Vec<Program<NamedDeBruijn>>> {
     match identify_file_type(file)? {
         FileType::UPLC => {
@@ -68,7 +68,7 @@ pub async fn load_programs_from_file(
 
 pub async fn load_programs_from_tx(
     tx: MintedTx<'_>,
-    query: impl ChainQuery,
+    query: ChainQuery,
 ) -> Result<Vec<Program<NamedDeBruijn>>> {
     println!("loading programs from tx");
     let mut inputs: Vec<_> = tx.transaction_body.inputs.iter().cloned().collect();

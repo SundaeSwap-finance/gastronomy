@@ -48,7 +48,7 @@ impl ExecutionTrace {
     pub async fn from_file(
         filename: &Path,
         parameters: &[String],
-        query: impl ChainQuery,
+        query: ChainQuery,
     ) -> Result<Vec<Self>> {
         println!("from file");
         let raw_programs = crate::uplc::load_programs_from_file(filename, query).await?;

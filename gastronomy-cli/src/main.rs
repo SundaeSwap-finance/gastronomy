@@ -3,7 +3,11 @@ use std::path::PathBuf;
 use anyhow::Result;
 use app::App;
 use clap::{command, Parser, Subcommand};
-use gastronomy::chain_query::{Blockfrost, None};
+use figment::providers::Env;
+use gastronomy::{
+    chain_query::ChainQuery,
+    config::{load_base_config, Config},
+};
 
 mod app;
 mod utils;
@@ -13,8 +17,6 @@ mod utils;
 struct Args {
     #[command(subcommand)]
     command: Option<Commands>,
-    #[clap(env)]
-    blockfrost: String,
 }
 
 #[derive(Subcommand, Debug)]
@@ -27,11 +29,23 @@ enum Commands {
     },
 }
 
+fn load_config() -> Result<Config> {
+    let config = load_base_config().merge(Env::raw()).extract()?;
+    Ok(config)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     utils::install_hooks().unwrap();
 
     let args = Args::parse();
+    let config = load_config()?;
+
+    let query = if let Some(blockfrost) = &config.blockfrost {
+        ChainQuery::blockfrost(blockfrost)
+    } else {
+        ChainQuery::None
+    };
 
     match args.command {
         Some(Commands::Run {
@@ -39,15 +53,7 @@ async fn main() -> Result<(), anyhow::Error> {
             parameters,
             index,
         }) => {
-            let mut raw_programs = if args.blockfrost.is_empty() {
-                gastronomy::uplc::load_programs_from_file(&file, None {}).await?
-            } else {
-                gastronomy::uplc::load_programs_from_file(
-                    &file,
-                    Blockfrost::new(args.blockfrost.as_str()),
-                )
-                .await?
-            };
+            let mut raw_programs = gastronomy::uplc::load_programs_from_file(&file, query).await?;
             let raw_program = raw_programs.remove(index.unwrap_or_default());
             let arguments = parameters
                 .iter()

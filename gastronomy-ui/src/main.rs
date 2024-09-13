@@ -5,8 +5,13 @@ use std::path::{Path, PathBuf};
 
 use api::{CreateTraceResponse, GetFrameResponse, GetTraceSummaryResponse};
 use dashmap::DashMap;
-use gastronomy::{chain_query::Blockfrost, ExecutionTrace};
-use tauri::{InvokeError, State, Wry};
+use figment::providers::{Env, Serialized};
+use gastronomy::{
+    chain_query::ChainQuery,
+    config::{load_base_config, Config},
+    ExecutionTrace,
+};
+use tauri::{InvokeError, Manager, State, Wry};
 use tauri_plugin_store::{with_store, StoreBuilder, StoreCollection};
 
 mod api;
@@ -15,28 +20,43 @@ struct SessionState {
     traces: DashMap<String, ExecutionTrace>,
 }
 
+fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, InvokeError> {
+    let stores = app_handle.state::<StoreCollection<Wry>>();
+    let path = PathBuf::from("settings.json");
+    let saved_config = with_store(app_handle.clone(), stores, path, |store| {
+        Ok(store.get("config").cloned())
+    })?;
+    let mut figment = load_base_config();
+    if let Some(saved) = saved_config {
+        figment = figment.merge(Serialized::defaults(saved));
+    }
+    let config = figment
+        .merge(Env::raw())
+        .extract()
+        .map_err(|e| InvokeError::from(e.to_string()))?;
+    Ok(config)
+}
+
 #[tauri::command]
 async fn create_traces<'a>(
     file: &Path,
     parameters: Vec<String>,
     state: State<'a, SessionState>,
     app_handle: tauri::AppHandle,
-    stores: State<'a, StoreCollection<Wry>>,
 ) -> Result<api::CreateTraceResponse, InvokeError> {
     println!("Creating traces {:?} {:?}", file, parameters);
-    let path = PathBuf::from("settings.json");
 
-    let key = with_store(app_handle, stores, path, |store| {
-        let key: String = store
-            .get("blockfrost.key")
-            .and_then(|v| v.as_str())
-            .map(|v| v.to_string())
-            .unwrap_or_default();
-        Ok(key)
-    })?;
-    let mut traces = gastronomy::trace_executions(file, &parameters, Blockfrost::new(key.as_str()))
+    let config = load_config(&app_handle)?;
+
+    let query = if let Some(blockfrost) = &config.blockfrost {
+        ChainQuery::blockfrost(blockfrost)
+    } else {
+        ChainQuery::None
+    };
+
+    let mut traces = gastronomy::trace_executions(file, &parameters, query)
         .await
-        .unwrap();
+        .map_err(InvokeError::from_anyhow)?;
     let mut identifiers = vec![];
     for trace in traces.drain(..) {
         let identifier = trace.identifier.clone();

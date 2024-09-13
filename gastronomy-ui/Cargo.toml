@@ -12,6 +12,7 @@ publish = false
 tauri-build = { version = "1.5.3", features = [] }
 
 [dependencies]
+figment = { version = "0.10", features = ["env", "toml"] }
 dashmap = "6"
 gastronomy = { path = "../gastronomy" }
 serde_json = "1.0"

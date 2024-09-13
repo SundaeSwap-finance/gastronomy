@@ -129,19 +129,6 @@ const Debugger: FC<IDebuggerProps> = ({
 
   const { stepsDiff = 0, memDiff = 0 } = currentFrame?.budget ?? {};
 
-  if (!identifier) {
-    return (
-      <div className="h-svh flex items-center justify-center">
-        <Triangle
-          height="80"
-          width="80"
-          color="#55960E"
-          ariaLabel="triangle-loading"
-        />
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="h-full flex justify-center items-center">
@@ -161,6 +148,19 @@ const Debugger: FC<IDebuggerProps> = ({
             Try again
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (!identifier) {
+    return (
+      <div className="h-svh flex items-center justify-center">
+        <Triangle
+          height="80"
+          width="80"
+          color="#55960E"
+          ariaLabel="triangle-loading"
+        />
       </div>
     );
   }
