@@ -1,7 +1,9 @@
 use std::{ffi::OsStr, fs, path::Path};
 
 use anyhow::{anyhow, Context, Result};
+use minicbor::bytes::ByteVec;
 use pallas::ledger::primitives::conway::{Language, MintedTx};
+use serde::Deserialize;
 use uplc::{
     ast::{FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
     machine::{
@@ -16,8 +18,9 @@ use uplc::{
 use crate::chain_query::ChainQuery;
 
 pub enum FileType {
-    UPLC,
+    Uplc,
     Flat,
+    Json,
     Transaction,
     TransactionId,
 }
@@ -30,8 +33,9 @@ pub fn identify_file_type(file: &Path) -> Result<FileType> {
     }
     let extension = file.extension().and_then(OsStr::to_str);
     match extension {
-        Some("uplc") => Ok(FileType::UPLC),
+        Some("uplc") => Ok(FileType::Uplc),
         Some("flat") => Ok(FileType::Flat),
+        Some("json") => Ok(FileType::Json),
         Some("tx") => Ok(FileType::Transaction),
         _ => Err(anyhow!("That extension is not supported.")),
     }
@@ -42,7 +46,7 @@ pub async fn load_programs_from_file(
     query: ChainQuery,
 ) -> Result<Vec<Program<NamedDeBruijn>>> {
     match identify_file_type(file)? {
-        FileType::UPLC => {
+        FileType::Uplc => {
             let code = fs::read_to_string(file)?;
             let program = parser::program(&code).unwrap().try_into()?;
             Ok(vec![program])
@@ -50,6 +54,13 @@ pub async fn load_programs_from_file(
         FileType::Flat => {
             let bytes = std::fs::read(file)?;
             let program = Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into();
+            Ok(vec![program])
+        }
+        FileType::Json => {
+            let export: AikenExport = serde_json::from_slice(&fs::read(file)?)?;
+            let bytes = hex::decode(&export.compiled_code)?;
+            let cbor: ByteVec = minicbor::decode(&bytes)?;
+            let program = Program::<FakeNamedDeBruijn>::from_flat(&cbor)?.into();
             Ok(vec![program])
         }
         FileType::TransactionId => {
@@ -142,4 +153,11 @@ pub fn execute_program(program: Program<NamedDeBruijn>) -> Result<Vec<(MachineSt
     }
 
     Ok(states)
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct AikenExport {
+    compiled_code: String,
+    // source_map: Option<BTreeMap<u64, String>>,
 }

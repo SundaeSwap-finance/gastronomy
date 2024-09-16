@@ -1392,6 +1392,7 @@ dependencies = [
  "futures",
  "hex",
  "home",
+ "minicbor",
  "num-bigint",
  "pallas",
  "reqwest 0.12.7",
