@@ -98,7 +98,15 @@ fn get_frame(
     })
 }
 
+const STACK_SIZE: usize = 4 * 1024 * 1024;
 fn main() {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .thread_stack_size(STACK_SIZE)
+        .build()
+        .unwrap();
+    tauri::async_runtime::set(runtime.handle().clone());
+
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {

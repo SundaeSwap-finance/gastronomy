@@ -30,12 +30,11 @@ enum Commands {
 }
 
 fn load_config() -> Result<Config> {
-    let config = load_base_config().merge(Env::raw()).extract()?;
+    let config = load_base_config().merge(Env::raw().split("_")).extract()?;
     Ok(config)
 }
 
-#[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
+async fn run() -> Result<(), anyhow::Error> {
     utils::install_hooks().unwrap();
 
     let args = Args::parse();
@@ -81,4 +80,21 @@ async fn main() -> Result<(), anyhow::Error> {
             Ok(())
         }
     }
+}
+
+const STACK_SIZE: usize = 4 * 1024 * 1024;
+fn main() -> Result<(), anyhow::Error> {
+    std::thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(|| {
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .thread_stack_size(STACK_SIZE)
+                .build()
+                .unwrap()
+                .block_on(run())
+        })
+        .unwrap()
+        .join()
+        .map_err(|err| anyhow::anyhow!("{:?}", err))?
 }
