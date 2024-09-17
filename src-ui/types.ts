@@ -16,6 +16,7 @@ export interface IFrame {
   label: string;
   retValue: string | null;
   term: string;
+  location: string | null;
   env: IEnv[];
 }
 

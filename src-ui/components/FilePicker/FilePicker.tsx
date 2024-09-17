@@ -15,7 +15,7 @@ const FilePicker: FC<IFilePickerProps> = ({ setFile, fileName }) => {
         { name: "UPLC Files", extensions: ["uplc"] },
         { name: "Flat Files", extensions: ["flat"] },
         { name: "Transaction Files", extensions: ["tx"] },
-        { name: "JSON Files", extensions: ["json"]}
+        { name: "JSON Files", extensions: ["json"] },
       ],
     });
 

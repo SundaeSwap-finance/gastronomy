@@ -219,8 +219,20 @@ const Debugger: FC<IDebuggerProps> = ({
               <h2 className="left-2 -top-3 bg-slate-950 text-blue-600 absolute px-2 z-10">
                 Term
               </h2>
-              <div className="p-4 overflow-auto absolute inset-0">
-                <DisplayString string={currentFrame?.term} />
+              <div className="h-full flex flex-col">
+                <div className="flex-auto relative">
+                  <div className="p-4 overflow-auto absolute inset-0">
+                    <DisplayString string={currentFrame?.term} />
+                  </div>
+                </div>
+                <div className="p-3 border-t border-lime-600 flex-initial relative">
+                  <h2 className="left-2 -top-3 bg-slate-950 absolute px-2 z-10">
+                    Source
+                  </h2>
+                  <div className="p-4 overflow-auto relative inset-0">
+                    <DisplayString string={currentFrame?.location} />
+                  </div>
+                </div>
               </div>
             </div>
             <div className="relative">
