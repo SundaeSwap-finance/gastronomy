@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 use anyhow::Result;
 use serde::Serialize;
@@ -25,6 +25,7 @@ pub struct Frame {
     pub env: Vec<EnvVar>,
     pub term: Value,
     pub ret_value: Option<Value>,
+    pub location: Option<String>,
     pub budget: ExBudget,
 }
 
@@ -62,8 +63,8 @@ impl ExecutionTrace {
                 .map(|(index, param)| crate::uplc::parse_parameter(index, param.clone()))
                 .collect::<Result<Vec<_>>>()?;
             let applied_program = crate::uplc::apply_parameters(raw_program, arguments)?;
-            let states = crate::uplc::execute_program(applied_program)?;
-            let frames = parse_frames(&states);
+            let states = crate::uplc::execute_program(applied_program.program)?;
+            let frames = parse_frames(&states, applied_program.source_map);
             execution_traces.push(Self {
                 identifier: Uuid::new_v4().to_string(),
                 filename: filename.display().to_string(),
@@ -78,17 +79,21 @@ impl ExecutionTrace {
 const MAX_CPU: i64 = 10000000000;
 const MAX_MEM: i64 = 14000000;
 
-fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) -> Vec<Frame> {
+fn parse_frames(
+    states: &[(MachineState, uplc::machine::cost_model::ExBudget)],
+    source_map: BTreeMap<u64, String>,
+) -> Vec<Frame> {
     let mut frames = vec![];
     let mut prev_steps = 0;
     let mut prev_mem = 0;
     for (state, budget) in states {
-        let (label, context, env, term, ret_value) = match state {
+        let (label, context, env, term, location, ret_value) = match state {
             MachineState::Compute(context, env, term) => (
                 "Compute",
                 parse_context(context),
                 parse_env(env),
                 term.to_string(),
+                term.index().and_then(|i| source_map.get(&i)).cloned(),
                 None,
             ),
             MachineState::Done(term) => {
@@ -98,6 +103,7 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
                     prev_frame.context.clone(),
                     prev_frame.env.clone(),
                     term.to_string(),
+                    term.index().and_then(|i| source_map.get(&i)).cloned(),
                     None,
                 )
             }
@@ -109,6 +115,7 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
                     parse_context(context),
                     prev_frame.env.clone(),
                     prev_frame.term.clone(),
+                    prev_frame.location.clone(),
                     Some(ret_value),
                 )
             }
@@ -121,6 +128,7 @@ fn parse_frames(states: &[(MachineState, uplc::machine::cost_model::ExBudget)]) 
             env,
             term,
             ret_value,
+            location,
             budget: ExBudget {
                 steps,
                 mem,

@@ -60,13 +60,14 @@ async fn run() -> Result<(), anyhow::Error> {
                 .map(|(index, param)| gastronomy::uplc::parse_parameter(index, param.clone()))
                 .collect::<Result<Vec<_>>>()?;
             let applied_program = gastronomy::uplc::apply_parameters(raw_program, arguments)?;
-            let states = gastronomy::uplc::execute_program(applied_program)?;
+            let states = gastronomy::uplc::execute_program(applied_program.program)?;
 
             let mut terminal = utils::init()?;
             let mut app = App {
                 file_name: file,
                 cursor: 0,
                 states,
+                source_map: applied_program.source_map,
                 exit: false,
                 focus: "Term".into(),
                 ..Default::default()

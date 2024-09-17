@@ -5366,8 +5366,8 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "uplc"
-version = "1.0.31-alpha"
-source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=e5a60f3#e5a60f393bc0ba018e252ec801ddc7e9bab577b2"
+version = "1.1.2"
+source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=3c2ae7c#3c2ae7c6314c3680c7a549fd3f682f10c9b992fc"
 dependencies = [
  "blst",
  "cryptoxide",

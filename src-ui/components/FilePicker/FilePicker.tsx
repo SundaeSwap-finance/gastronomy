@@ -11,10 +11,11 @@ const FilePicker: FC<IFilePickerProps> = ({ setFile, fileName }) => {
     const selectedFile = await open({
       multiple: false,
       filters: [
-        { name: "Executable UPLC", extensions: ["uplc", "flat", "tx"] },
+        { name: "Executable UPLC", extensions: ["uplc", "flat", "tx", "json"] },
         { name: "UPLC Files", extensions: ["uplc"] },
         { name: "Flat Files", extensions: ["flat"] },
         { name: "Transaction Files", extensions: ["tx"] },
+        { name: "JSON Files", extensions: ["json"]}
       ],
     });
 

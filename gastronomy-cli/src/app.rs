@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::io::{self};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -9,8 +10,9 @@ use ratatui::{
     symbols::border,
     widgets::{block::*, *},
 };
-use uplc::ast::{NamedDeBruijn, Term};
+use uplc::ast::NamedDeBruijn;
 use uplc::machine::cost_model::ExBudget;
+use uplc::machine::indexed_term::IndexedTerm;
 use uplc::machine::value::Value;
 use uplc::machine::{Context, MachineState};
 
@@ -19,6 +21,7 @@ pub struct App {
     pub file_name: PathBuf,
     pub cursor: usize,
     pub states: Vec<(MachineState, ExBudget)>,
+    pub source_map: BTreeMap<u64, String>,
     pub exit: bool,
     pub focus: String,
     pub term_scroll: u16,
@@ -159,7 +162,14 @@ impl Widget for &mut App {
         };
 
         render_command_region(label, self.cursor, &self.states, command_region, buf);
-        render_term_region(self.focus.clone(), term, self.term_scroll, term_region, buf);
+        render_term_region(
+            self.focus.clone(),
+            term,
+            &self.source_map,
+            self.term_scroll,
+            term_region,
+            buf,
+        );
         render_context_region(
             self.focus.clone(),
             context,
@@ -295,7 +305,8 @@ fn render_command_region(
 
 fn render_term_region(
     focus: String,
-    term: &Term<NamedDeBruijn>,
+    term: &IndexedTerm<NamedDeBruijn>,
+    source_map: &BTreeMap<u64, String>,
     mut term_scroll: u16,
     term_region: Rect,
     buf: &mut Buffer,
@@ -309,7 +320,8 @@ fn render_term_region(
         .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
         .border_set(border::PLAIN);
 
-    let term_text = term.to_string();
+    let location = term.index().and_then(|i| source_map.get(&i));
+    let term_text = format!("{:?}: {}", location, term);
     let max_term_scroll = term_text.split('\n').count() as u16 - 1;
     if term_scroll > max_term_scroll {
         term_scroll = max_term_scroll;

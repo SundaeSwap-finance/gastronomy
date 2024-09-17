@@ -1,13 +1,14 @@
-use std::{ffi::OsStr, fs, path::Path};
+use std::{collections::BTreeMap, ffi::OsStr, fs, path::Path};
 
 use anyhow::{anyhow, Context, Result};
 use minicbor::bytes::ByteVec;
 use pallas::ledger::primitives::conway::{Language, MintedTx};
 use serde::Deserialize;
 use uplc::{
-    ast::{FakeNamedDeBruijn, NamedDeBruijn, Program, Term},
+    ast::{FakeNamedDeBruijn, NamedDeBruijn, Program},
     machine::{
         cost_model::{CostModel, ExBudget},
+        indexed_term::IndexedTerm,
         Machine, MachineState,
     },
     parser,
@@ -17,7 +18,12 @@ use uplc::{
 
 use crate::chain_query::ChainQuery;
 
-pub enum FileType {
+pub struct LoadedProgram {
+    pub program: Program<NamedDeBruijn>,
+    pub source_map: BTreeMap<u64, String>,
+}
+
+enum FileType {
     Uplc,
     Flat,
     Json,
@@ -25,7 +31,7 @@ pub enum FileType {
     TransactionId,
 }
 
-pub fn identify_file_type(file: &Path) -> Result<FileType> {
+fn identify_file_type(file: &Path) -> Result<FileType> {
     if let Some(path) = file.to_str() {
         if path.len() == 64 && hex::decode(path).is_ok() {
             return Ok(FileType::TransactionId);
@@ -41,27 +47,36 @@ pub fn identify_file_type(file: &Path) -> Result<FileType> {
     }
 }
 
-pub async fn load_programs_from_file(
-    file: &Path,
-    query: ChainQuery,
-) -> Result<Vec<Program<NamedDeBruijn>>> {
+pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<Vec<LoadedProgram>> {
     match identify_file_type(file)? {
         FileType::Uplc => {
             let code = fs::read_to_string(file)?;
             let program = parser::program(&code).unwrap().try_into()?;
-            Ok(vec![program])
+            let source_map = BTreeMap::new();
+            Ok(vec![LoadedProgram {
+                program,
+                source_map,
+            }])
         }
         FileType::Flat => {
             let bytes = std::fs::read(file)?;
             let program = Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into();
-            Ok(vec![program])
+            let source_map = BTreeMap::new();
+            Ok(vec![LoadedProgram {
+                program,
+                source_map,
+            }])
         }
         FileType::Json => {
             let export: AikenExport = serde_json::from_slice(&fs::read(file)?)?;
             let bytes = hex::decode(&export.compiled_code)?;
             let cbor: ByteVec = minicbor::decode(&bytes)?;
             let program = Program::<FakeNamedDeBruijn>::from_flat(&cbor)?.into();
-            Ok(vec![program])
+            let source_map = export.source_map.unwrap_or_default();
+            Ok(vec![LoadedProgram {
+                program,
+                source_map,
+            }])
         }
         FileType::TransactionId => {
             let tx_id = hex::decode(file.to_str().unwrap())?;
@@ -77,10 +92,7 @@ pub async fn load_programs_from_file(
     }
 }
 
-pub async fn load_programs_from_tx(
-    tx: MintedTx<'_>,
-    query: ChainQuery,
-) -> Result<Vec<Program<NamedDeBruijn>>> {
+async fn load_programs_from_tx(tx: MintedTx<'_>, query: ChainQuery) -> Result<Vec<LoadedProgram>> {
     println!("loading programs from tx");
     let mut inputs: Vec<_> = tx.transaction_body.inputs.iter().cloned().collect();
     if let Some(ref_inputs) = &tx.transaction_body.reference_inputs {
@@ -100,7 +112,10 @@ pub async fn load_programs_from_tx(
     Ok(tx_to_programs(&tx, &resolved_inputs, &slot_config)
         .unwrap()
         .drain(..)
-        .map(|p| p.1)
+        .map(|p| LoadedProgram {
+            program: p.1,
+            source_map: BTreeMap::new(),
+        })
         .collect())
 }
 
@@ -120,14 +135,28 @@ pub fn parse_parameter(index: usize, parameter: String) -> Result<PlutusData> {
 }
 
 pub fn apply_parameters(
-    program: Program<NamedDeBruijn>,
+    LoadedProgram {
+        program,
+        source_map,
+    }: LoadedProgram,
     parameters: Vec<PlutusData>,
-) -> Result<Program<NamedDeBruijn>> {
+) -> Result<LoadedProgram> {
     let mut program = program;
+    let mut source_map_offset = 0;
     for param in parameters {
         program = program.apply_data(param);
+        source_map_offset += 1;
     }
-    Ok(program)
+    // Every time we apply a parameter, it adds another root term wrapping the program.
+    // That messes with offsets from our source maps, so make sure to update those.
+    let source_map = source_map
+        .into_iter()
+        .map(|(index, location)| (index + source_map_offset, location))
+        .collect();
+    Ok(LoadedProgram {
+        program,
+        source_map,
+    })
 }
 
 pub fn execute_program(program: Program<NamedDeBruijn>) -> Result<Vec<(MachineState, ExBudget)>> {
@@ -146,7 +175,7 @@ pub fn execute_program(program: Program<NamedDeBruijn>) -> Result<Vec<(MachineSt
             Ok(state) => state,
             Err(err) => {
                 eprintln!("Machine Error: {}", err);
-                MachineState::Done(Term::Error)
+                MachineState::Done(IndexedTerm::Error { index: None })
             }
         };
         states.push((state.clone(), machine.ex_budget));
@@ -159,5 +188,5 @@ pub fn execute_program(program: Program<NamedDeBruijn>) -> Result<Vec<(MachineSt
 #[serde(rename_all = "camelCase")]
 struct AikenExport {
     compiled_code: String,
-    // source_map: Option<BTreeMap<u64, String>>,
+    source_map: Option<BTreeMap<u64, String>>,
 }

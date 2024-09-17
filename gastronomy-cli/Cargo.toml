@@ -17,8 +17,8 @@ figment = { version = "0.10", features = ["env", "toml"] }
 gastronomy = { path = "../gastronomy" }
 ratatui = { version = "0.28", features = ["all-widgets"] }
 tokio = { version = "1.40", features = ["full"] }
-uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "e5a60f3" }
-# uplc = { path = "../aiken/crates/uplc" }
+uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "3c2ae7c" }
+# uplc = { path = "../../aiken/crates/uplc" }
 
 [package.metadata.dist]
 dist = true

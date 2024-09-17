@@ -111,8 +111,13 @@ fn main() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
             let mut store = StoreBuilder::new(app.handle(), "settings.json".parse()?).build();
-            store.load()?;
-
+            let load_res = store.load();
+            if let Err(tauri_plugin_store::Error::Io(e)) = &load_res {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    return Ok(());
+                }
+            }
+            load_res?;
             Ok(())
         })
         .manage(SessionState {
