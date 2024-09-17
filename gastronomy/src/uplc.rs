@@ -4,8 +4,9 @@ use anyhow::{anyhow, Context, Result};
 use minicbor::bytes::ByteVec;
 use pallas::ledger::primitives::conway::{Language, MintedTx};
 use serde::Deserialize;
+pub use uplc::ast::Program;
 use uplc::{
-    ast::{FakeNamedDeBruijn, NamedDeBruijn, Program},
+    ast::{FakeNamedDeBruijn, NamedDeBruijn},
     machine::{
         cost_model::{CostModel, ExBudget},
         indexed_term::IndexedTerm,
@@ -19,6 +20,7 @@ use uplc::{
 use crate::chain_query::ChainQuery;
 
 pub struct LoadedProgram {
+    pub filename: String,
     pub program: Program<NamedDeBruijn>,
     pub source_map: BTreeMap<u64, String>,
 }
@@ -48,12 +50,14 @@ fn identify_file_type(file: &Path) -> Result<FileType> {
 }
 
 pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<Vec<LoadedProgram>> {
+    let filename = file.display().to_string();
     match identify_file_type(file)? {
         FileType::Uplc => {
             let code = fs::read_to_string(file)?;
             let program = parser::program(&code).unwrap().try_into()?;
             let source_map = BTreeMap::new();
             Ok(vec![LoadedProgram {
+                filename,
                 program,
                 source_map,
             }])
@@ -63,6 +67,7 @@ pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<V
             let program = Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into();
             let source_map = BTreeMap::new();
             Ok(vec![LoadedProgram {
+                filename,
                 program,
                 source_map,
             }])
@@ -74,6 +79,7 @@ pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<V
             let program = Program::<FakeNamedDeBruijn>::from_flat(&cbor)?.into();
             let source_map = export.source_map.unwrap_or_default();
             Ok(vec![LoadedProgram {
+                filename,
                 program,
                 source_map,
             }])
@@ -82,17 +88,21 @@ pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<V
             let tx_id = hex::decode(file.to_str().unwrap())?;
             let tx_bytes = query.get_tx_bytes(tx_id[..].into()).await?;
             let multi_era_tx = MintedTx::decode_fragment(&tx_bytes).unwrap();
-            load_programs_from_tx(multi_era_tx, query).await
+            load_programs_from_tx(filename, multi_era_tx, query).await
         }
         FileType::Transaction => {
             let bytes = std::fs::read(file)?;
             let multi_era_tx = MintedTx::decode_fragment(&bytes).unwrap();
-            load_programs_from_tx(multi_era_tx, query).await
+            load_programs_from_tx(filename, multi_era_tx, query).await
         }
     }
 }
 
-async fn load_programs_from_tx(tx: MintedTx<'_>, query: ChainQuery) -> Result<Vec<LoadedProgram>> {
+async fn load_programs_from_tx(
+    filename: String,
+    tx: MintedTx<'_>,
+    query: ChainQuery,
+) -> Result<Vec<LoadedProgram>> {
     println!("loading programs from tx");
     let mut inputs: Vec<_> = tx.transaction_body.inputs.iter().cloned().collect();
     if let Some(ref_inputs) = &tx.transaction_body.reference_inputs {
@@ -113,6 +123,7 @@ async fn load_programs_from_tx(tx: MintedTx<'_>, query: ChainQuery) -> Result<Ve
         .unwrap()
         .drain(..)
         .map(|p| LoadedProgram {
+            filename: filename.clone(),
             program: p.1,
             source_map: BTreeMap::new(),
         })
@@ -136,6 +147,7 @@ pub fn parse_parameter(index: usize, parameter: String) -> Result<PlutusData> {
 
 pub fn apply_parameters(
     LoadedProgram {
+        filename,
         program,
         source_map,
     }: LoadedProgram,
@@ -154,6 +166,7 @@ pub fn apply_parameters(
         .map(|(index, location)| (index + source_map_offset, location))
         .collect();
     Ok(LoadedProgram {
+        filename,
         program,
         source_map,
     })

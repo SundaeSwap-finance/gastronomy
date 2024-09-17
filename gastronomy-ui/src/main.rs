@@ -5,16 +5,17 @@ use std::path::{Path, PathBuf};
 
 use api::{CreateTraceResponse, GetFrameResponse, GetTraceSummaryResponse};
 use dashmap::DashMap;
+use execution_trace::ExecutionTrace;
 use figment::providers::{Env, Serialized};
 use gastronomy::{
     chain_query::ChainQuery,
     config::{load_base_config, Config},
-    ExecutionTrace,
 };
 use tauri::{InvokeError, Manager, State, Wry};
 use tauri_plugin_store::{with_store, StoreBuilder, StoreCollection};
 
 mod api;
+mod execution_trace;
 
 struct SessionState {
     traces: DashMap<String, ExecutionTrace>,
@@ -54,11 +55,12 @@ async fn create_traces<'a>(
         ChainQuery::None
     };
 
-    let mut traces = gastronomy::trace_executions(file, &parameters, query)
+    let mut programs = gastronomy::execution_trace::load_file(file, &parameters, query)
         .await
         .map_err(InvokeError::from_anyhow)?;
     let mut identifiers = vec![];
-    for trace in traces.drain(..) {
+    for program in programs.drain(..) {
+        let trace = ExecutionTrace::from_program(program)?;
         let identifier = trace.identifier.clone();
         state.traces.insert(identifier.clone(), trace);
         identifiers.push(identifier);
@@ -67,35 +69,30 @@ async fn create_traces<'a>(
 }
 
 #[tauri::command]
-fn get_trace_summary(
+async fn get_trace_summary(
     identifier: &str,
-    state: State<SessionState>,
+    state: State<'_, SessionState>,
 ) -> Result<api::GetTraceSummaryResponse, InvokeError> {
     println!("Getting summary");
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
-    Ok(GetTraceSummaryResponse {
-        frame_count: trace.frames.len(),
-    })
+    let frame_count = trace.frame_count().await?;
+    Ok(GetTraceSummaryResponse { frame_count })
 }
 
 #[tauri::command]
-fn get_frame(
+async fn get_frame(
     identifier: &str,
     frame: usize,
-    state: State<SessionState>,
+    state: State<'_, SessionState>,
 ) -> Result<api::GetFrameResponse, InvokeError> {
     println!("Getting frame");
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
-    let Some(frame) = trace.frames.get(frame) else {
-        return Err(InvokeError::from("Frame not found"));
-    };
-    Ok(GetFrameResponse {
-        frame: frame.clone(),
-    })
+    let frame = trace.get_frame(frame).await?;
+    Ok(GetFrameResponse { frame })
 }
 
 const STACK_SIZE: usize = 4 * 1024 * 1024;

@@ -1399,7 +1399,6 @@ dependencies = [
  "serde",
  "serde_json",
  "uplc",
- "uuid",
 ]
 
 [[package]]
@@ -1424,12 +1423,14 @@ dependencies = [
  "dashmap",
  "figment",
  "gastronomy",
+ "pallas-codec",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-store",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

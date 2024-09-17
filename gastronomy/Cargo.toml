@@ -22,4 +22,3 @@ serde = "1"
 serde_json = "1"
 uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "3c2ae7c" }
 # uplc = { path = "../../aiken/crates/uplc" }
-uuid = { version = "1", features = ["v4"] }
