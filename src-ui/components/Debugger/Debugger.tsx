@@ -26,6 +26,9 @@ const Debugger: FC<IDebuggerProps> = ({
   parameters,
   fileName,
 }) => {
+  const [identifiers, setIdentifiers] = useState<string[] | undefined>(
+    undefined,
+  );
   const [identifier, setIdentifier] = useState<string | undefined>(undefined);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,18 +37,6 @@ const Debugger: FC<IDebuggerProps> = ({
   const [currentFrame, setCurrentFrame] = useState<IFrame | undefined>(
     undefined,
   );
-
-  const handleQuit = useCallback(() => {
-    onQuit();
-    setCurrentFrame(undefined);
-  }, [onQuit]);
-
-  const handleNext = useCallback(() => {
-    if (currentFrameIndex < frameCount - 1) {
-      setCurrentFrameIndex((prev) => prev + 1);
-      setIsModalOpen(false);
-    }
-  }, [currentFrameIndex, frameCount]);
 
   useEffect(() => {
     const fetchFrame = async () => {
@@ -66,12 +57,31 @@ const Debugger: FC<IDebuggerProps> = ({
     return "Compute";
   };
 
+  const handleQuit = useCallback(() => {
+    onQuit();
+    setCurrentFrame(undefined);
+  }, [onQuit]);
+
+  const handleNext = useCallback(() => {
+    if (currentFrameIndex < frameCount - 1) {
+      setCurrentFrameIndex((prev) => prev + 1);
+      setIsModalOpen(false);
+    }
+  }, [currentFrameIndex, frameCount]);
+
   const handlePrevious = useCallback(() => {
     if (currentFrameIndex > 0) {
       setCurrentFrameIndex((prev) => prev - 1);
       setIsModalOpen(false);
     }
   }, [currentFrameIndex]);
+
+  const handleNextTrace = useCallback(() => {
+    if (!identifiers) return;
+    const currentIndex = identifiers.indexOf(identifier ?? "");
+    const nextIdentifier = identifiers[currentIndex + 1] || identifiers[0];
+    setIdentifier(nextIdentifier);
+  }, [identifiers, identifier]);
 
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
@@ -81,9 +91,11 @@ const Debugger: FC<IDebuggerProps> = ({
         handlePrevious();
       } else if (event.key === "q") {
         handleQuit();
+      } else if (event.key === "t") {
+        handleNextTrace();
       }
     },
-    [handleNext, handlePrevious, handleQuit],
+    [handleNext, handlePrevious, handleQuit, handleNextTrace],
   );
 
   useEffect(() => {
@@ -93,23 +105,16 @@ const Debugger: FC<IDebuggerProps> = ({
     };
   }, [handleKeyPress]);
 
-  const fetchFrames = useCallback(
+  const fetchIdentifiers = useCallback(
     async (file: string, parameters: string[]) => {
       try {
         const { identifiers } = await invoke<ITraceResponse>("create_traces", {
           file,
           parameters,
         });
+        setIdentifiers(identifiers);
         const identifier = identifiers[0];
         setIdentifier(identifier);
-
-        const { frameCount } = await invoke<ISummaryResponse>(
-          "get_trace_summary",
-          {
-            identifier,
-          },
-        );
-        setFrameCount(frameCount);
       } catch (error) {
         setError(error as string);
       }
@@ -118,8 +123,28 @@ const Debugger: FC<IDebuggerProps> = ({
   );
 
   useEffect(() => {
-    fetchFrames(file, parameters);
-  }, [fetchFrames, file, parameters]);
+    fetchIdentifiers(file, parameters);
+  }, [fetchIdentifiers, file, parameters]);
+
+  const fetchFrames = useCallback(async (identifier: string) => {
+    try {
+      const { frameCount } = await invoke<ISummaryResponse>(
+        "get_trace_summary",
+        {
+          identifier,
+        },
+      );
+      setFrameCount(frameCount);
+      setCurrentFrameIndex(0);
+      setIsModalOpen(false);
+    } catch (error) {
+      setError(error as string);
+    }
+  }, []);
+
+  useEffect(() => {
+    identifier && fetchFrames(identifier);
+  }, [identifier, fetchFrames]);
 
   useEffect(() => {
     if (currentFrame?.retValue) {
@@ -165,11 +190,15 @@ const Debugger: FC<IDebuggerProps> = ({
     );
   }
 
+  const traceIndex = identifiers?.indexOf(identifier);
+  const multipleTraces = (identifiers?.length ?? 0) > 1;
+  const title = multipleTraces ? `${fileName} #${traceIndex}` : fileName;
+
   return (
     <div className="px-2 pb-3 pt-4 relative h-full">
       <div className="border border-lime-600 h-full pt-3">
         <h1 className="px-2 bg-slate-950 absolute right-1/2 translate-x-1/2 top-1">
-          Gastronomy Debugger ({fileName})
+          Gastronomy Debugger ({title})
         </h1>
         <div className="grid grid-rows-[max-content_1fr] h-full text-sm">
           <div className="px-2 pt-1 pb-4">
@@ -272,9 +301,11 @@ const Debugger: FC<IDebuggerProps> = ({
       </div>
       <DebuggerNavigation
         className="absolute right-1/2 translate-x-1/2 bottom-1"
+        multipleTraces={multipleTraces}
         handleNext={handleNext}
         handlePrevious={handlePrevious}
-        handleQuite={handleQuit}
+        handleQuit={handleQuit}
+        handleNextTrace={handleNextTrace}
       />
       <Modal isOpen={isModalOpen}>
         <div className="">
@@ -287,9 +318,11 @@ const Debugger: FC<IDebuggerProps> = ({
         </div>
         <DebuggerNavigation
           className="absolute right-1/2 translate-x-1/2 -bottom-2"
+          multipleTraces={multipleTraces}
           handleNext={handleNext}
+          handleNextTrace={handleNextTrace}
           handlePrevious={handlePrevious}
-          handleQuite={handleQuit}
+          handleQuit={handleQuit}
         />
       </Modal>
     </div>
