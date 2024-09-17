@@ -69,12 +69,7 @@ impl App {
                         } else {
                             1
                         };
-                        let prev = if self.cursor > 0 {
-                            self.cursor - stride
-                        } else {
-                            0
-                        };
-                        self.cursor = prev;
+                        self.cursor = self.cursor.saturating_sub(stride);
                     }
                     KeyCode::Tab => match self.focus.as_str() {
                         "Term" => self.focus = "Context".into(),
