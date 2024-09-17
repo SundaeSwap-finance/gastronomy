@@ -115,18 +115,13 @@ impl Widget for &mut App {
             .direction(Direction::Horizontal)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(main_region);
-        let left_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(100), Constraint::Min(3)])
-            .split(layout[0]);
-        let term_region = left_layout[0];
-        let source_region = left_layout[1];
-        let right_layout = Layout::default()
+        let term_region = layout[0];
+        let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(layout[1]);
-        let context_region = right_layout[0];
-        let env_region = right_layout[1];
+        let context_region = layout[0];
+        let env_region = layout[1];
 
         let curr_state = &self.states[self.cursor];
         let (label, context, env, term, ret_value) = match &curr_state.0 {
@@ -167,8 +162,14 @@ impl Widget for &mut App {
         };
 
         render_command_region(label, self.cursor, &self.states, command_region, buf);
-        render_term_region(self.focus.clone(), term, self.term_scroll, term_region, buf);
-        render_source_region(term.index(), &self.source_map, source_region, buf);
+        render_term_region(
+            self.focus.clone(),
+            term,
+            &self.source_map,
+            self.term_scroll,
+            term_region,
+            buf,
+        );
         render_context_region(
             self.focus.clone(),
             context,
@@ -305,6 +306,7 @@ fn render_command_region(
 fn render_term_region(
     focus: String,
     term: &IndexedTerm<NamedDeBruijn>,
+    source_map: &BTreeMap<u64, String>,
     mut term_scroll: u16,
     term_region: Rect,
     buf: &mut Buffer,
@@ -315,7 +317,7 @@ fn render_term_region(
         } else {
             Color::Reset
         }))
-        .borders(Borders::TOP | Borders::LEFT)
+        .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
         .border_set(border::PLAIN);
 
     let term_text = term.to_string();
@@ -324,27 +326,36 @@ fn render_term_region(
         term_scroll = max_term_scroll;
     }
 
-    Paragraph::new(term_text)
-        .block(term_block)
-        .scroll((term_scroll, 0))
-        .render(term_region, buf);
+    let location = term.index().and_then(|i| source_map.get(&i));
+
+    if let Some(location) = location {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(100), Constraint::Min(3)])
+            .split(term_region);
+
+        let term_region = layout[0];
+        let source_region = layout[1];
+
+        let term_block = term_block.borders(Borders::TOP | Borders::LEFT);
+        Paragraph::new(term_text)
+            .block(term_block)
+            .scroll((term_scroll, 0))
+            .render(term_region, buf);
+        render_source_region(location, source_region, buf);
+    } else {
+        Paragraph::new(term_text)
+            .block(term_block)
+            .scroll((term_scroll, 0))
+            .render(term_region, buf);
+    }
 }
 
-fn render_source_region(
-    index: Option<u64>,
-    source_map: &BTreeMap<u64, String>,
-    source_region: Rect,
-    buf: &mut Buffer,
-) {
+fn render_source_region(location: &str, source_region: Rect, buf: &mut Buffer) {
     let source_block = Block::default()
         .title(" Source ".fg(Color::Reset))
         .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
         .border_set(border::PLAIN);
-
-    let location = index
-        .and_then(|i| source_map.get(&i))
-        .cloned()
-        .unwrap_or_default();
 
     Paragraph::new(location)
         .block(source_block)
