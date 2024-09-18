@@ -1,7 +1,13 @@
-use std::{collections::BTreeMap, fmt::Display};
+use std::{
+    collections::BTreeMap,
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use gastronomy::{
-    execution_trace::{parse_context, parse_env, parse_raw_frames, parse_uplc_value, RawFrame},
+    execution_trace::{
+        parse_context, parse_env, parse_raw_frames, parse_uplc_value, read_source_files, RawFrame,
+    },
     uplc::{self, LoadedProgram, Program},
     Frame,
 };
@@ -57,6 +63,18 @@ impl ExecutionTrace {
             .map_err(to_invoke_error)?;
         frame_source.await.map_err(to_invoke_error)?
     }
+    pub async fn read_source_files(
+        &self,
+        source_root: &Path,
+    ) -> Result<BTreeMap<String, String>, InvokeError> {
+        let (files_sink, files_source) = oneshot::channel();
+        let request = WorkerRequest::ReadSourceFiles(source_root.to_path_buf(), files_sink);
+        self.worker_channel
+            .send(request)
+            .await
+            .map_err(to_invoke_error)?;
+        files_source.await.map_err(to_invoke_error)?
+    }
 }
 
 fn to_invoke_error<T: Display>(err: T) -> InvokeError {
@@ -68,6 +86,7 @@ type ResponseChannel<T> = oneshot::Sender<Result<T, InvokeError>>;
 enum WorkerRequest {
     FrameCount(ResponseChannel<usize>),
     GetFrame(usize, ResponseChannel<Frame>),
+    ReadSourceFiles(PathBuf, ResponseChannel<BTreeMap<String, String>>),
 }
 
 struct ExecutionTraceWorker {
@@ -91,6 +110,9 @@ impl ExecutionTraceWorker {
                 WorkerRequest::GetFrame(index, res) => {
                     let _ = res.send(Self::get_frame(index, &frames));
                 }
+                WorkerRequest::ReadSourceFiles(source_root, res) => {
+                    let _ = res.send(Self::read_source_files(&source_root, &frames));
+                }
             }
         }
     }
@@ -109,5 +131,12 @@ impl ExecutionTraceWorker {
             budget: raw.budget.clone(),
         };
         Ok(frame)
+    }
+
+    fn read_source_files(
+        source_root: &Path,
+        frames: &[RawFrame<'_>],
+    ) -> Result<BTreeMap<String, String>, InvokeError> {
+        Ok(read_source_files(source_root, frames))
     }
 }

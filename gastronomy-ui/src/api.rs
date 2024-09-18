@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use gastronomy::Frame;
 use serde::Serialize;
 
@@ -17,4 +19,10 @@ pub struct GetTraceSummaryResponse {
 #[serde(rename_all = "camelCase")]
 pub struct GetFrameResponse {
     pub frame: Frame,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetSourceResponse {
+    pub files: BTreeMap<String, String>,
 }

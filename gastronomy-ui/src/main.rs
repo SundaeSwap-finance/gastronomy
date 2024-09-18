@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use api::{CreateTraceResponse, GetFrameResponse, GetTraceSummaryResponse};
+use api::{CreateTraceResponse, GetFrameResponse, GetSourceResponse, GetTraceSummaryResponse};
 use dashmap::DashMap;
 use execution_trace::ExecutionTrace;
 use figment::providers::{Env, Serialized};
@@ -44,7 +44,7 @@ async fn create_traces<'a>(
     parameters: Vec<String>,
     state: State<'a, SessionState>,
     app_handle: tauri::AppHandle,
-) -> Result<api::CreateTraceResponse, InvokeError> {
+) -> Result<CreateTraceResponse, InvokeError> {
     println!("Creating traces {:?} {:?}", file, parameters);
 
     let config = load_config(&app_handle)?;
@@ -72,7 +72,7 @@ async fn create_traces<'a>(
 async fn get_trace_summary(
     identifier: &str,
     state: State<'_, SessionState>,
-) -> Result<api::GetTraceSummaryResponse, InvokeError> {
+) -> Result<GetTraceSummaryResponse, InvokeError> {
     println!("Getting summary");
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
@@ -86,13 +86,26 @@ async fn get_frame(
     identifier: &str,
     frame: usize,
     state: State<'_, SessionState>,
-) -> Result<api::GetFrameResponse, InvokeError> {
+) -> Result<GetFrameResponse, InvokeError> {
     println!("Getting frame");
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
     let frame = trace.get_frame(frame).await?;
     Ok(GetFrameResponse { frame })
+}
+
+#[tauri::command]
+async fn get_source(
+    identifier: &str,
+    source_root: &Path,
+    state: State<'_, SessionState>,
+) -> Result<GetSourceResponse, InvokeError> {
+    let Some(trace) = state.traces.get(identifier) else {
+        return Err(InvokeError::from("Trace not found"));
+    };
+    let files = trace.read_source_files(source_root).await?;
+    Ok(GetSourceResponse { files })
 }
 
 const STACK_SIZE: usize = 4 * 1024 * 1024;
@@ -123,7 +136,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             create_traces,
             get_trace_summary,
-            get_frame
+            get_frame,
+            get_source,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

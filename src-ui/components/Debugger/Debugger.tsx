@@ -1,9 +1,11 @@
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api";
+import { message, open } from "@tauri-apps/api/dialog";
 import cx from "classnames";
 import {
   IFrame,
   IFrameResponse,
+  ISourceResponse,
   ISummaryResponse,
   ITraceResponse,
 } from "../../types";
@@ -33,7 +35,9 @@ const Debugger: FC<IDebuggerProps> = ({
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [viewSource, setViewSource] = useState(false);
   const [frameCount, setFrameCount] = useState<number>(0);
+  const [sourceFiles, setSourceFiles] = useState<Record<string, string>>({});
   const [currentFrame, setCurrentFrame] = useState<IFrame | undefined>(
     undefined,
   );
@@ -83,6 +87,50 @@ const Debugger: FC<IDebuggerProps> = ({
     setIdentifier(nextIdentifier);
   }, [identifiers, identifier]);
 
+  const [sourceText, sourcePos] = useMemo(() => {
+    const location = currentFrame?.location;
+    if (!location) return [null, null];
+    const [file, line, column] = location.split(":");
+    const sourcePos = {
+      line: Number(line),
+      column: Number(column),
+    };
+    return [sourceFiles[file] || null, sourcePos];
+  }, [currentFrame, sourceFiles]);
+
+  const handleViewSource = useCallback(async () => {
+    if (!identifier) return;
+    if (viewSource) {
+      setViewSource(false);
+      return;
+    }
+    const location = currentFrame?.location;
+    if (!location) return;
+    const [file] = location.split(":");
+    if (!sourceFiles[file]) {
+      await message("Please select the root directory of your app.");
+      const sourceRoot = await open({
+        title: "Open Aiken source root",
+        multiple: false,
+        directory: true,
+        recursive: true,
+      });
+      if (!sourceRoot) return;
+      try {
+        const { files } = await invoke<ISourceResponse>("get_source", {
+          identifier,
+          sourceRoot,
+        });
+        console.log({ files });
+        setSourceFiles(files);
+      } catch (error) {
+        setError(error as string);
+        return;
+      }
+    }
+    setViewSource(true);
+  }, [identifier, viewSource, currentFrame, sourceFiles]);
+
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === "n") {
@@ -93,9 +141,11 @@ const Debugger: FC<IDebuggerProps> = ({
         handleQuit();
       } else if (event.key === "t") {
         handleNextTrace();
+      } else if (event.key === "v") {
+        handleViewSource();
       }
     },
-    [handleNext, handlePrevious, handleQuit, handleNextTrace],
+    [handleNext, handlePrevious, handleQuit, handleNextTrace, handleViewSource],
   );
 
   useEffect(() => {
@@ -135,6 +185,7 @@ const Debugger: FC<IDebuggerProps> = ({
         },
       );
       setFrameCount(frameCount);
+      setSourceFiles({});
       setCurrentFrameIndex(0);
       setIsModalOpen(false);
     } catch (error) {
@@ -246,21 +297,34 @@ const Debugger: FC<IDebuggerProps> = ({
           <div className="grid grid-cols-2 h-full border-t border-lime-600">
             <div className="relative border-r border-lime-600">
               <h2 className="left-2 -top-3 bg-slate-950 text-blue-600 absolute px-2 z-10">
-                Term
+                {viewSource ? "Source" : "Term"}
               </h2>
               <div className="h-full flex flex-col">
                 <div className="flex-auto relative">
                   <div className="p-4 overflow-auto absolute inset-0">
-                    <DisplayString string={currentFrame?.term} />
+                    <DisplayString
+                      string={
+                        viewSource
+                          ? sourceText || "File not found"
+                          : currentFrame?.term
+                      }
+                      highlight={viewSource ? sourcePos : null}
+                    />
                   </div>
                 </div>
                 {currentFrame?.location && (
                   <div className="p-3 border-t border-lime-600 flex-initial relative">
                     <h2 className="left-2 -top-3 bg-slate-950 absolute px-2 z-10">
-                      Source
+                      Source Location
                     </h2>
                     <div className="p-4 overflow-auto relative inset-0">
                       <DisplayString string={currentFrame.location} />
+                    </div>
+                    <div className="left-2 -bottom-2 bg-slate-950 absolute px-2 z-10">
+                      <button className="hover:underline">
+                        {viewSource ? "View Term" : "View Source"}
+                      </button>{" "}
+                      <span className="text-blue-600">{"<V>"}</span>
                     </div>
                   </div>
                 )}

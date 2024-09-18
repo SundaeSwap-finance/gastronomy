@@ -1,4 +1,9 @@
-use std::{collections::BTreeMap, path::Path, rc::Rc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    path::Path,
+    rc::Rc,
+};
 
 use anyhow::Result;
 use serde::Serialize;
@@ -186,4 +191,39 @@ pub fn parse_env(env: &[uplc::machine::value::Value]) -> Vec<EnvVar> {
 
 pub fn parse_uplc_value(value: uplc::machine::value::Value) -> Value {
     uplc::machine::discharge::value_as_term(value).to_string()
+}
+
+pub fn read_source_files(source_root: &Path, frames: &[RawFrame<'_>]) -> BTreeMap<String, String> {
+    let filenames: BTreeSet<&str> = frames
+        .iter()
+        .filter_map(|f| f.location)
+        .filter_map(|loc| loc.split_once(":"))
+        .map(|(file, _)| file)
+        .collect();
+
+    let mut roots = vec![source_root.join("validators"), source_root.join("lib")];
+
+    if let Some(packages) = fs::read_dir(source_root.join("build").join("packages")).ok() {
+        for package in packages {
+            if let Some(dir) = package
+                .ok()
+                .filter(|e| e.file_type().ok().is_some_and(|f| f.is_dir()))
+            {
+                roots.push(dir.path().join("lib"));
+            }
+        }
+    }
+
+    let mut files = BTreeMap::new();
+
+    for filename in filenames {
+        if let Some(contents) = roots
+            .iter()
+            .find_map(|root| fs::read_to_string(root.join(filename)).ok())
+        {
+            files.insert(filename.to_string(), contents);
+        }
+    }
+
+    files
 }

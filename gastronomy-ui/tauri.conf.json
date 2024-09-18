@@ -13,6 +13,7 @@
     "allowlist": {
       "all": false,
       "dialog": {
+        "message": true,
         "open": true
       }
     },

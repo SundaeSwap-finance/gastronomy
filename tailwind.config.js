@@ -5,7 +5,17 @@ export default {
     "./src-ui/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      keyframes: {
+        "caret-blink": {
+          "0%": { "text-decoration": "none" },
+          "100%": { "text-decoration": "underline" },
+        }
+      },
+      animation: {
+        "caret-blink": "caret-blink 1s infinite"
+      }
+    },
   },
   plugins: [],
 }

@@ -32,6 +32,10 @@ export interface IFrameResponse {
   frame: IFrame;
 }
 
+export interface ISourceResponse {
+  files: Record<string, string>;
+}
+
 export interface IBlockfrostSettings {
   key: string;
 }
