@@ -1,28 +1,16 @@
-import { ChangeEventHandler, useEffect, useMemo, useState } from "react";
+import { ChangeEventHandler, useMemo, useState } from "react";
+import cx from "classnames";
 import Debugger from "./components/Debugger";
 import FilePicker from "./components/FilePicker";
-import cx from "classnames";
+import Settings from "./components/Settings";
 import gastronomyLogo from "./assets/images/gastronomy-logo.svg";
 import sundaeLogo from "./assets/images/sundae-logo.svg";
-import { Store } from "tauri-plugin-store-api";
-import { ISettings } from "./types";
 
 function App() {
   const [displayDebugger, setDisplayDebugger] = useState(false);
+  const [displaySettings, setDisplaySettings] = useState(false);
   const [parameters, setParameters] = useState<string[]>([]);
   const [file, setFile] = useState("");
-  const [config, setConfig] = useState<ISettings | undefined>();
-
-  const store = useMemo(() => {
-    return new Store("settings.json");
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const data = (await store.get<ISettings>("config")) ?? undefined;
-      setConfig(data);
-    })();
-  }, [store]);
 
   const fileName = useMemo(() => {
     const parts = file.split(/[/\\]/);
@@ -41,6 +29,10 @@ function App() {
 
   return (
     <div className="bg-slate-950 h-svh font-['Source_Code_Pro'] text-lime-600">
+      <Settings
+        isOpen={displaySettings}
+        onClose={() => setDisplaySettings(false)}
+      />
       {displayDebugger ? (
         <Debugger
           file={file}
@@ -55,28 +47,6 @@ function App() {
             Gastronomy
           </h1>
           <div className="border border-lime-600 p-6 flex flex-col gap-6 w-[30rem]">
-            <input
-              type="text"
-              placeholder="Blockfrost API Key"
-              value={config?.blockfrost?.key}
-              onChange={(event) => {
-                const key = event.target.value;
-                const newBlockfrost = key ? { key } : undefined;
-                const newConfig = {
-                  ...config,
-                  blockfrost: newBlockfrost,
-                };
-                setConfig(newConfig);
-              }}
-              onBlur={async () => {
-                try {
-                  await store.set("config", config);
-                  await store.save();
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-            />
             <FilePicker setFile={setFile} fileName={fileName} />
             <div className="flex flex-col gap-4">
               <label htmlFor="parameters" className="cursor-pointer">
@@ -91,17 +61,28 @@ function App() {
                 value={parameters?.join("\n")}
               />
             </div>
-            <button
-              className={cx(
-                "p-2 text-lime-600 border border-lime-600 transition-colors duration-300 ease-in-out",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                { "hover:bg-lime-600 hover:text-slate-950": file },
-              )}
-              onClick={() => setDisplayDebugger(true)}
-              disabled={!file}
-            >
-              Run Debugger
-            </button>
+            <div className="w-full grid grid-cols-2">
+              <button
+                className={cx(
+                  "p-2 text-lime-600 border border-lime-600 transition-colors duration-300 ease-in-out",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  { "hover:bg-lime-600 hover:text-slate-950": file },
+                )}
+                onClick={() => setDisplayDebugger(true)}
+                disabled={!file}
+              >
+                Run Debugger
+              </button>
+              <button
+                className={cx(
+                  "p-2 text-lime-600 border border-lime-600 transition-colors duration-300 ease-in-out",
+                  "hover:bg-lime-600 hover:text-slate-950",
+                )}
+                onClick={() => setDisplaySettings(true)}
+              >
+                Settings
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <div>Created by </div>

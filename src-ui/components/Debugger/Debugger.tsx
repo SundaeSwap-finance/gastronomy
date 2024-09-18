@@ -307,7 +307,7 @@ const Debugger: FC<IDebuggerProps> = ({
         handleQuit={handleQuit}
         handleNextTrace={handleNextTrace}
       />
-      <Modal isOpen={isModalOpen}>
+      <Modal className="w-[50rem]" isOpen={isModalOpen}>
         <div className="">
           <h2 className="absolute left-4 -top-3 bg-slate-950 px-2 text-blue-600">
             Return Value
