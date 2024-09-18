@@ -72,6 +72,8 @@ async fn run() -> Result<(), anyhow::Error> {
             } else {
                 BTreeMap::new()
             };
+            let source_token_indices =
+                gastronomy::execution_trace::find_source_token_indices(&frames);
 
             let mut terminal = utils::init()?;
             let mut app = App {
@@ -79,6 +81,7 @@ async fn run() -> Result<(), anyhow::Error> {
                 cursor: 0,
                 frames,
                 source_files,
+                source_token_indices,
                 exit: false,
                 ..Default::default()
             };

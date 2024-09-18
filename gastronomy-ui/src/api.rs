@@ -13,6 +13,7 @@ pub struct CreateTraceResponse {
 #[serde(rename_all = "camelCase")]
 pub struct GetTraceSummaryResponse {
     pub frame_count: usize,
+    pub source_token_indices: Vec<usize>,
 }
 
 #[derive(Serialize)]

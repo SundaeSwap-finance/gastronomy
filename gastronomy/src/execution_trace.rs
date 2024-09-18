@@ -227,3 +227,15 @@ pub fn read_source_files(source_root: &Path, frames: &[RawFrame<'_>]) -> BTreeMa
 
     files
 }
+
+pub fn find_source_token_indices(frames: &[RawFrame<'_>]) -> Vec<usize> {
+    let mut result = vec![];
+    let mut last_location = None;
+    for (index, frame) in frames.iter().enumerate() {
+        if result.is_empty() || frame.location != last_location {
+            result.push(index);
+        }
+        last_location = frame.location;
+    }
+    result
+}

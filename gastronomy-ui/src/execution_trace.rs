@@ -6,7 +6,8 @@ use std::{
 
 use gastronomy::{
     execution_trace::{
-        parse_context, parse_env, parse_raw_frames, parse_uplc_value, read_source_files, RawFrame,
+        find_source_token_indices, parse_context, parse_env, parse_raw_frames, parse_uplc_value,
+        read_source_files, RawFrame,
     },
     uplc::{self, LoadedProgram, Program},
     Frame,
@@ -45,14 +46,14 @@ impl ExecutionTrace {
             worker_channel,
         })
     }
-    pub async fn frame_count(&self) -> Result<usize, InvokeError> {
-        let (frame_count_sink, frame_count_source) = oneshot::channel();
-        let request = WorkerRequest::FrameCount(frame_count_sink);
+    pub async fn get_trace_summary(&self) -> Result<(usize, Vec<usize>), InvokeError> {
+        let (summary_sink, summary_source) = oneshot::channel();
+        let request = WorkerRequest::GetTraceSummary(summary_sink);
         self.worker_channel
             .send(request)
             .await
             .map_err(to_invoke_error)?;
-        frame_count_source.await.map_err(to_invoke_error)?
+        summary_source.await.map_err(to_invoke_error)?
     }
     pub async fn get_frame(&self, frame: usize) -> Result<Frame, InvokeError> {
         let (frame_sink, frame_source) = oneshot::channel();
@@ -84,7 +85,7 @@ fn to_invoke_error<T: Display>(err: T) -> InvokeError {
 type ResponseChannel<T> = oneshot::Sender<Result<T, InvokeError>>;
 
 enum WorkerRequest {
-    FrameCount(ResponseChannel<usize>),
+    GetTraceSummary(ResponseChannel<(usize, Vec<usize>)>),
     GetFrame(usize, ResponseChannel<Frame>),
     ReadSourceFiles(PathBuf, ResponseChannel<BTreeMap<String, String>>),
 }
@@ -104,8 +105,8 @@ impl ExecutionTraceWorker {
         let mut requests = self.requests;
         while let Some(request) = requests.blocking_recv() {
             match request {
-                WorkerRequest::FrameCount(res) => {
-                    let _ = res.send(Ok(frames.len()));
+                WorkerRequest::GetTraceSummary(res) => {
+                    let _ = res.send(Self::get_trace_summary(&frames));
                 }
                 WorkerRequest::GetFrame(index, res) => {
                     let _ = res.send(Self::get_frame(index, &frames));
@@ -115,6 +116,12 @@ impl ExecutionTraceWorker {
                 }
             }
         }
+    }
+
+    fn get_trace_summary(frames: &[RawFrame<'_>]) -> Result<(usize, Vec<usize>), InvokeError> {
+        let frame_count = frames.len();
+        let source_token_indices = find_source_token_indices(frames);
+        Ok((frame_count, source_token_indices))
     }
 
     fn get_frame(index: usize, frames: &[RawFrame<'_>]) -> Result<Frame, InvokeError> {

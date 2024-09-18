@@ -77,8 +77,11 @@ async fn get_trace_summary(
     let Some(trace) = state.traces.get(identifier) else {
         return Err(InvokeError::from("Trace not found"));
     };
-    let frame_count = trace.frame_count().await?;
-    Ok(GetTraceSummaryResponse { frame_count })
+    let (frame_count, source_token_indices) = trace.get_trace_summary().await?;
+    Ok(GetTraceSummaryResponse {
+        frame_count,
+        source_token_indices,
+    })
 }
 
 #[tauri::command]

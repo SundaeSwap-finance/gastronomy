@@ -34,6 +34,7 @@ pub struct App<'a> {
     pub cursor: usize,
     pub frames: Vec<RawFrame<'a>>,
     pub source_files: BTreeMap<String, String>,
+    pub source_token_indices: Vec<usize>,
     pub view_source: bool,
     pub exit: bool,
     pub focus: Focus,
@@ -67,25 +68,46 @@ impl<'a> App<'a> {
                         self.exit = true;
                     }
                     KeyCode::Char('N') | KeyCode::Char('n') | KeyCode::Right => {
-                        let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
-                            50
+                        if self.view_source {
+                            self.cursor = self
+                                .source_token_indices
+                                .iter()
+                                .find(|i| **i > self.cursor)
+                                .copied()
+                                .unwrap_or(self.frames.len() - 1);
                         } else {
-                            1
-                        };
-                        let next = self.cursor + stride;
-                        self.cursor = if next < self.frames.len() {
-                            next
-                        } else {
-                            self.frames.len() - 1
+                            let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
+                            {
+                                50
+                            } else {
+                                1
+                            };
+                            let next = self.cursor + stride;
+                            self.cursor = if next < self.frames.len() {
+                                next
+                            } else {
+                                self.frames.len() - 1
+                            };
                         };
                     }
                     KeyCode::Char('P') | KeyCode::Char('p') | KeyCode::Left => {
-                        let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
-                            50
+                        if self.view_source {
+                            self.cursor = self
+                                .source_token_indices
+                                .iter()
+                                .rev()
+                                .find(|i| **i < self.cursor)
+                                .copied()
+                                .unwrap_or(0);
                         } else {
-                            1
-                        };
-                        self.cursor = self.cursor.saturating_sub(stride);
+                            let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
+                            {
+                                50
+                            } else {
+                                1
+                            };
+                            self.cursor = self.cursor.saturating_sub(stride);
+                        }
                     }
                     KeyCode::Char('v') => {
                         self.view_source = !self.view_source;

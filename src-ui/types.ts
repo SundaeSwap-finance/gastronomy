@@ -26,6 +26,7 @@ export interface ITraceResponse {
 
 export interface ISummaryResponse {
   frameCount: number;
+  sourceTokenIndices: number[];
 }
 
 export interface IFrameResponse {

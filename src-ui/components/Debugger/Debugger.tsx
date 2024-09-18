@@ -37,6 +37,7 @@ const Debugger: FC<IDebuggerProps> = ({
   const [error, setError] = useState("");
   const [viewSource, setViewSource] = useState(false);
   const [frameCount, setFrameCount] = useState<number>(0);
+  const [sourceTokenIndices, setSourceTokenIndices] = useState<number[]>([]);
   const [sourceFiles, setSourceFiles] = useState<Record<string, string>>({});
   const [currentFrame, setCurrentFrame] = useState<IFrame | undefined>(
     undefined,
@@ -67,18 +68,32 @@ const Debugger: FC<IDebuggerProps> = ({
   }, [onQuit]);
 
   const handleNext = useCallback(() => {
-    if (currentFrameIndex < frameCount - 1) {
-      setCurrentFrameIndex((prev) => prev + 1);
-      setIsModalOpen(false);
-    }
-  }, [currentFrameIndex, frameCount]);
+    setCurrentFrameIndex((prev) => {
+      let next;
+      if (viewSource) {
+        next = sourceTokenIndices.find((i) => i > prev) ?? frameCount - 1;
+      } else {
+        next = prev + 1;
+      }
+      return Math.min(next, frameCount - 1);
+    });
+  }, [viewSource, sourceTokenIndices, frameCount]);
 
   const handlePrevious = useCallback(() => {
-    if (currentFrameIndex > 0) {
-      setCurrentFrameIndex((prev) => prev - 1);
-      setIsModalOpen(false);
-    }
-  }, [currentFrameIndex]);
+    setCurrentFrameIndex((prev) => {
+      let next;
+      if (viewSource) {
+        next =
+          sourceTokenIndices
+            .slice()
+            .reverse()
+            .find((i) => i < prev) ?? 0;
+      } else {
+        next = prev - 1;
+      }
+      return Math.max(next, 0);
+    });
+  }, [viewSource, sourceTokenIndices]);
 
   const handleNextTrace = useCallback(() => {
     if (!identifiers) return;
@@ -178,13 +193,14 @@ const Debugger: FC<IDebuggerProps> = ({
 
   const fetchFrames = useCallback(async (identifier: string) => {
     try {
-      const { frameCount } = await invoke<ISummaryResponse>(
+      const { frameCount, sourceTokenIndices } = await invoke<ISummaryResponse>(
         "get_trace_summary",
         {
           identifier,
         },
       );
       setFrameCount(frameCount);
+      setSourceTokenIndices(sourceTokenIndices);
       setSourceFiles({});
       setCurrentFrameIndex(0);
       setIsModalOpen(false);
@@ -198,9 +214,7 @@ const Debugger: FC<IDebuggerProps> = ({
   }, [identifier, fetchFrames]);
 
   useEffect(() => {
-    if (currentFrame?.retValue) {
-      setIsModalOpen(true);
-    }
+    setIsModalOpen(!!currentFrame?.retValue);
   }, [currentFrame?.retValue]);
 
   const { stepsDiff = 0, memDiff = 0 } = currentFrame?.budget ?? {};
