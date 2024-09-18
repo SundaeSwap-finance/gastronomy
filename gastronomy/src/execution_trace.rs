@@ -84,14 +84,19 @@ pub fn parse_raw_frames<'a>(
     let mut prev_mem = 0;
     for (state, budget) in states {
         let (label, context, env, term, location, ret_value) = match state {
-            MachineState::Compute(context, env, term) => (
-                "Compute",
-                context,
-                env,
-                term,
-                term.index().and_then(|i| source_map.get(&i)),
-                None,
-            ),
+            MachineState::Compute(context, env, term) => {
+                let prev_location = frames.last().and_then(|f: &RawFrame<'_>| f.location);
+                (
+                    "Compute",
+                    context,
+                    env,
+                    term,
+                    term.index()
+                        .and_then(|i| source_map.get(&i))
+                        .or(prev_location),
+                    None,
+                )
+            }
             MachineState::Done(term) => {
                 let prev_frame: &RawFrame =
                     frames.last().expect("Invalid program starts with return");
@@ -100,7 +105,9 @@ pub fn parse_raw_frames<'a>(
                     prev_frame.context,
                     prev_frame.env,
                     term,
-                    term.index().and_then(|i| source_map.get(&i)),
+                    term.index()
+                        .and_then(|i| source_map.get(&i))
+                        .or(prev_frame.location),
                     None,
                 )
             }
