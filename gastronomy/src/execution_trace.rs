@@ -203,7 +203,7 @@ pub fn read_source_files(source_root: &Path, frames: &[RawFrame<'_>]) -> BTreeMa
 
     let mut roots = vec![source_root.join("validators"), source_root.join("lib")];
 
-    if let Some(packages) = fs::read_dir(source_root.join("build").join("packages")).ok() {
+    if let Ok(packages) = fs::read_dir(source_root.join("build").join("packages")) {
         for package in packages {
             if let Some(dir) = package
                 .ok()

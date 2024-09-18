@@ -1,36 +1,46 @@
-use std::collections::BTreeMap;
-use std::io::{self};
+use std::io;
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use crate::utils;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use gastronomy::execution_trace::{ExBudget, RawFrame};
 use ratatui::{
     prelude::*,
     symbols::border,
     widgets::{block::*, *},
 };
 use uplc::ast::NamedDeBruijn;
-use uplc::machine::cost_model::ExBudget;
 use uplc::machine::indexed_term::IndexedTerm;
 use uplc::machine::value::Value;
-use uplc::machine::{Context, MachineState};
+use uplc::machine::Context;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Focus {
+    Term,
+    Context,
+    Env,
+}
+impl Default for Focus {
+    fn default() -> Self {
+        Self::Term
+    }
+}
 
 #[derive(Default)]
-pub struct App {
+pub struct App<'a> {
     pub file_name: PathBuf,
     pub cursor: usize,
-    pub states: Vec<(MachineState, ExBudget)>,
-    pub source_map: BTreeMap<u64, String>,
+    pub frames: Vec<RawFrame<'a>>,
     pub exit: bool,
-    pub focus: String,
+    pub focus: Focus,
     pub term_scroll: u16,
     pub context_scroll: u16,
     pub env_scroll: u16,
     pub return_scroll: u16,
 }
 
-impl App {
+impl<'a> App<'a> {
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut utils::Tui) -> io::Result<()> {
         while !self.exit {
@@ -60,10 +70,10 @@ impl App {
                             1
                         };
                         let next = self.cursor + stride;
-                        self.cursor = if next < self.states.len() {
+                        self.cursor = if next < self.frames.len() {
                             next
                         } else {
-                            self.states.len() - 1
+                            self.frames.len() - 1
                         };
                     }
                     KeyCode::Char('P') | KeyCode::Char('p') | KeyCode::Left => {
@@ -74,23 +84,24 @@ impl App {
                         };
                         self.cursor = self.cursor.saturating_sub(stride);
                     }
-                    KeyCode::Tab => match self.focus.as_str() {
-                        "Term" => self.focus = "Context".into(),
-                        "Context" => self.focus = "Env".into(),
-                        "Env" => self.focus = "Term".into(),
-                        _ => {}
+                    KeyCode::Tab => match self.focus {
+                        Focus::Term => self.focus = Focus::Context,
+                        Focus::Context => self.focus = Focus::Env,
+                        Focus::Env => self.focus = Focus::Term,
                     },
-                    KeyCode::Up => match self.focus.as_str() {
-                        "Term" => self.term_scroll = self.term_scroll.saturating_sub(1),
-                        "Context" => self.context_scroll = self.context_scroll.saturating_sub(1),
-                        "Env" => self.env_scroll = self.env_scroll.saturating_sub(1),
-                        _ => {}
+                    KeyCode::Up => match self.focus {
+                        Focus::Term => self.term_scroll = self.term_scroll.saturating_sub(1),
+                        Focus::Context => {
+                            self.context_scroll = self.context_scroll.saturating_sub(1)
+                        }
+                        Focus::Env => self.env_scroll = self.env_scroll.saturating_sub(1),
                     },
-                    KeyCode::Down => match self.focus.as_str() {
-                        "Term" => self.term_scroll = self.term_scroll.saturating_add(1),
-                        "Context" => self.context_scroll = self.context_scroll.saturating_add(1),
-                        "Env" => self.env_scroll = self.env_scroll.saturating_add(1),
-                        _ => {}
+                    KeyCode::Down => match self.focus {
+                        Focus::Term => self.term_scroll = self.term_scroll.saturating_add(1),
+                        Focus::Context => {
+                            self.context_scroll = self.context_scroll.saturating_add(1)
+                        }
+                        Focus::Env => self.env_scroll = self.env_scroll.saturating_add(1),
                     },
                     _ => {}
                 }
@@ -101,7 +112,7 @@ impl App {
     }
 }
 
-impl Widget for &mut App {
+impl<'a> Widget for &mut App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let layout = render_block_region(self.file_name.clone(), area, buf);
 
@@ -109,7 +120,7 @@ impl Widget for &mut App {
         let command_region = layout[1];
         let main_region = layout[2];
 
-        render_gauge_region(self.cursor, &self.states, gauge_region, buf);
+        render_gauge_region(self.cursor, &self.frames, gauge_region, buf);
 
         let layout = Layout::default()
             .direction(Direction::Horizontal)
@@ -123,61 +134,31 @@ impl Widget for &mut App {
         let context_region = layout[0];
         let env_region = layout[1];
 
-        let curr_state = &self.states[self.cursor];
-        let (label, context, env, term, ret_value) = match &curr_state.0 {
-            MachineState::Return(context, value) => {
-                let mut prev_idx = self.cursor - 1;
-                while prev_idx > 0 {
-                    if let MachineState::Compute(_, _, _) = &self.states[prev_idx].0 {
-                        break;
-                    }
-                    prev_idx -= 1;
-                }
-                let last_state = &self.states[prev_idx];
-                if let MachineState::Compute(_, env, term) = &last_state.0 {
-                    ("Return", context, env, term, Some(value))
-                } else {
-                    return;
-                }
-            }
-            MachineState::Compute(context, env, term) => ("Compute", context, env, term, None),
-            MachineState::Done(term) => {
-                if self.cursor == 0 {
-                    return;
-                }
-                let mut prev_idx = self.cursor - 1;
-                while prev_idx > 0 {
-                    if let MachineState::Compute(_, _, _) = &self.states[prev_idx].0 {
-                        break;
-                    }
-                    prev_idx -= 1;
-                }
-                let last_state = &self.states[prev_idx];
-                if let MachineState::Compute(context, env, _) = &last_state.0 {
-                    ("Done", context, env, term, None)
-                } else {
-                    return;
-                }
-            }
-        };
+        let curr_frame = &self.frames[self.cursor];
+        let label = curr_frame.label;
+        let context = curr_frame.context;
+        let env = curr_frame.env;
+        let term = curr_frame.term;
+        let location = curr_frame.location;
+        let ret_value = curr_frame.ret_value;
 
-        render_command_region(label, self.cursor, &self.states, command_region, buf);
+        render_command_region(label, self.cursor, &self.frames, command_region, buf);
         render_term_region(
-            self.focus.clone(),
+            self.focus,
             term,
-            &self.source_map,
+            location,
             self.term_scroll,
             term_region,
             buf,
         );
         render_context_region(
-            self.focus.clone(),
+            self.focus,
             context,
             context_region,
             self.context_scroll,
             buf,
         );
-        render_env_region(env, self.focus.clone(), self.env_scroll, env_region, buf);
+        render_env_region(env, self.focus, self.env_scroll, env_region, buf);
         render_clear_popup_region(area, ret_value, buf);
     }
 }
@@ -222,51 +203,40 @@ fn render_block_region(file_name: PathBuf, area: Rect, buf: &mut Buffer) -> Rc<[
 
 fn render_gauge_region(
     cursor: usize,
-    states: &[(MachineState, ExBudget)],
+    frames: &[RawFrame<'_>],
     gauge_region: Rect,
     buf: &mut Buffer,
 ) {
     Gauge::default()
         .gauge_style(Style::default().fg(Color::Green))
-        .label(format!("Step {}/{}", cursor, states.len() - 1))
-        .ratio(cursor as f64 / states.len() as f64)
+        .label(format!("Step {}/{}", cursor, frames.len() - 1))
+        .ratio(cursor as f64 / frames.len() as f64)
         .render(gauge_region, buf);
 }
 
-fn get_next(cursor: usize, states: &[(MachineState, ExBudget)]) -> &str {
-    if cursor < states.len() - 1 {
-        match &states[cursor + 1].0 {
-            MachineState::Compute(_, _, _) => "Compute",
-            MachineState::Return(_, _) => "Return",
-            MachineState::Done(_) => "Done",
-        }
+fn get_next<'a>(cursor: usize, frames: &[RawFrame<'a>]) -> &'a str {
+    if cursor < frames.len() - 1 {
+        frames[cursor + 1].label
     } else {
         "None"
     }
 }
 
-const MAX_CPU: i64 = 10000000000;
-const MAX_MEM: i64 = 14000000;
-
 fn render_command_region(
     label: &str,
     cursor: usize,
-    states: &[(MachineState, ExBudget)],
+    frames: &[RawFrame<'_>],
     command_region: Rect,
     buf: &mut Buffer,
 ) {
-    let next = get_next(cursor, states);
+    let next = get_next(cursor, frames);
 
-    let (cpu, mem) = {
-        let curr_budget = states[cursor].1;
-        (MAX_CPU - curr_budget.cpu, MAX_MEM - curr_budget.mem)
-    };
-    let (prev_cpu, prev_mem) = if cursor > 0 {
-        let prev_budget = states[cursor - 1].1;
-        (MAX_CPU - prev_budget.cpu, MAX_MEM - prev_budget.mem)
-    } else {
-        (0, 0)
-    };
+    let ExBudget {
+        steps,
+        mem,
+        steps_diff,
+        mem_diff,
+    } = frames[cursor].budget;
 
     Line::from(vec![
         "Current: ".into(),
@@ -276,19 +246,19 @@ fn render_command_region(
     .render(command_region, buf);
     Line::from(vec![
         "Budget: ".into(),
-        format!("{} steps ", cpu)
+        format!("{} steps ", steps)
             .fg(Color::Blue)
             .add_modifier(Modifier::BOLD),
-        if prev_cpu < cpu {
-            format!("(+{}) ", cpu - prev_cpu).fg(Color::Green)
+        if steps_diff > 0 {
+            format!("(+{}) ", steps_diff).fg(Color::Green)
         } else {
             "".into()
         },
         format!("{} mem ", mem)
             .fg(Color::Blue)
             .add_modifier(Modifier::BOLD),
-        if prev_mem < mem {
-            format!("(+{}) ", mem - prev_mem).fg(Color::Green)
+        if mem_diff > 0 {
+            format!("(+{}) ", mem_diff).fg(Color::Green)
         } else {
             "".into()
         },
@@ -304,15 +274,15 @@ fn render_command_region(
 }
 
 fn render_term_region(
-    focus: String,
+    focus: Focus,
     term: &IndexedTerm<NamedDeBruijn>,
-    source_map: &BTreeMap<u64, String>,
+    location: Option<&String>,
     mut term_scroll: u16,
     term_region: Rect,
     buf: &mut Buffer,
 ) {
     let term_block = Block::default()
-        .title(" Term ".fg(if focus == "Term" {
+        .title(" Term ".fg(if focus == Focus::Term {
             Color::Blue
         } else {
             Color::Reset
@@ -325,8 +295,6 @@ fn render_term_region(
     if term_scroll > max_term_scroll {
         term_scroll = max_term_scroll;
     }
-
-    let location = term.index().and_then(|i| source_map.get(&i));
 
     if let Some(location) = location {
         let layout = Layout::default()
@@ -363,7 +331,7 @@ fn render_source_region(location: &str, source_region: Rect, buf: &mut Buffer) {
 }
 
 fn render_context_region(
-    focus: String,
+    focus: Focus,
     context: &Context,
     context_region: Rect,
     mut context_scroll: u16,
@@ -374,7 +342,7 @@ fn render_context_region(
         ..symbols::border::PLAIN
     };
     let context_block = Block::default()
-        .title(" Context ".fg(if focus == "Context" {
+        .title(" Context ".fg(if focus == Focus::Context {
             Color::Blue
         } else {
             Color::Reset
@@ -396,7 +364,7 @@ fn render_context_region(
 
 fn render_env_region(
     env: &Rc<Vec<uplc::machine::value::Value>>,
-    focus: String,
+    focus: Focus,
     mut env_scroll: u16,
     env_region: Rect,
     buf: &mut Buffer,
@@ -408,7 +376,7 @@ fn render_env_region(
         ..symbols::border::PLAIN
     };
     let env_block = Block::default()
-        .title(" Env ".fg(if focus == "Env" {
+        .title(" Env ".fg(if focus == Focus::Env {
             Color::Blue
         } else {
             Color::Reset
