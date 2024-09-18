@@ -1,6 +1,7 @@
-use std::io;
+use std::iter;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::{collections::BTreeMap, io};
 
 use crate::utils;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -32,6 +33,8 @@ pub struct App<'a> {
     pub file_name: PathBuf,
     pub cursor: usize,
     pub frames: Vec<RawFrame<'a>>,
+    pub source_files: BTreeMap<String, String>,
+    pub view_source: bool,
     pub exit: bool,
     pub focus: Focus,
     pub term_scroll: u16,
@@ -84,6 +87,9 @@ impl<'a> App<'a> {
                         };
                         self.cursor = self.cursor.saturating_sub(stride);
                     }
+                    KeyCode::Char('v') => {
+                        self.view_source = !self.view_source;
+                    }
                     KeyCode::Tab => match self.focus {
                         Focus::Term => self.focus = Focus::Context,
                         Focus::Context => self.focus = Focus::Env,
@@ -114,7 +120,15 @@ impl<'a> App<'a> {
 
 impl<'a> Widget for &mut App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let layout = render_block_region(self.file_name.clone(), area, buf);
+        let curr_frame = &self.frames[self.cursor];
+        let label = curr_frame.label;
+        let context = curr_frame.context;
+        let env = curr_frame.env;
+        let term = curr_frame.term;
+        let location = curr_frame.location;
+        let ret_value = curr_frame.ret_value;
+
+        let layout = render_block_region(self.file_name.clone(), location, area, buf);
 
         let gauge_region = layout[0];
         let command_region = layout[1];
@@ -134,20 +148,14 @@ impl<'a> Widget for &mut App<'a> {
         let context_region = layout[0];
         let env_region = layout[1];
 
-        let curr_frame = &self.frames[self.cursor];
-        let label = curr_frame.label;
-        let context = curr_frame.context;
-        let env = curr_frame.env;
-        let term = curr_frame.term;
-        let location = curr_frame.location;
-        let ret_value = curr_frame.ret_value;
-
         render_command_region(label, self.cursor, &self.frames, command_region, buf);
         render_term_region(
             self.focus,
             term,
             location,
+            &self.source_files,
             self.term_scroll,
+            self.view_source,
             term_region,
             buf,
         );
@@ -163,20 +171,31 @@ impl<'a> Widget for &mut App<'a> {
     }
 }
 
-fn render_block_region(file_name: PathBuf, area: Rect, buf: &mut Buffer) -> Rc<[Rect]> {
+fn render_block_region(
+    file_name: PathBuf,
+    location: Option<&String>,
+    area: Rect,
+    buf: &mut Buffer,
+) -> Rc<[Rect]> {
     let title = Title::from(vec![
         " Gastronomy Debugger (".bold(),
         file_name.to_str().unwrap().bold(),
         ")".bold(),
     ]);
-    let instructions = Title::from(Line::from(vec![
+    let mut instructions = if location.is_some() {
+        vec![" View Source ".into(), "<V>".blue().bold()]
+    } else {
+        vec![]
+    };
+    instructions.extend([
         " Next ".into(),
         "<N>".blue().bold(),
         " Previous ".into(),
         "<P>".blue().bold(),
         " Quit ".into(),
         "<Q> ".blue().bold(),
-    ]));
+    ]);
+    let instructions = Title::from(Line::from(instructions));
 
     let block = Block::default()
         .title(title.alignment(Alignment::Center))
@@ -273,16 +292,20 @@ fn render_command_region(
     .render(command_region, buf);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_term_region(
     focus: Focus,
     term: &IndexedTerm<NamedDeBruijn>,
     location: Option<&String>,
+    source_files: &BTreeMap<String, String>,
     mut term_scroll: u16,
+    view_source: bool,
     term_region: Rect,
     buf: &mut Buffer,
 ) {
+    let title = if view_source { " Source " } else { " Term " };
     let term_block = Block::default()
-        .title(" Term ".fg(if focus == Focus::Term {
+        .title(title.fg(if focus == Focus::Term {
             Color::Blue
         } else {
             Color::Reset
@@ -290,13 +313,34 @@ fn render_term_region(
         .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
         .border_set(border::PLAIN);
 
-    let term_text = term.to_string();
-    let max_term_scroll = term_text.split('\n').count() as u16 - 1;
-    if term_scroll > max_term_scroll {
-        term_scroll = max_term_scroll;
-    }
-
     if let Some(location) = location {
+        // holding onto this so the lifespan of the Line<'_>s outlive the conditional where we made them
+        #[allow(unused_assignments)]
+        let mut term_text = String::new();
+
+        let term_lines = if view_source {
+            let mut pieces = location.split(":");
+            let file = pieces.next().unwrap();
+            let line = pieces.next().unwrap().parse().unwrap();
+            let column = pieces.next().unwrap().parse().unwrap();
+
+            let old_term_text = source_files
+                .get(file)
+                .map(|c| c.as_str())
+                .unwrap_or("File not found");
+            // to highlight lines properly, each line needs to take up the full width of its region
+            term_text = pad_lines_with_spaces(old_term_text, term_region.width as usize);
+            highlight_text(&term_text, line, column)
+        } else {
+            term_text = term.to_string();
+            split_text(&term_text)
+        };
+
+        let max_term_scroll = term_lines.len() as u16 - 1;
+        if term_scroll > max_term_scroll {
+            term_scroll = max_term_scroll;
+        }
+
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints(vec![Constraint::Percentage(100), Constraint::Min(3)])
@@ -306,12 +350,18 @@ fn render_term_region(
         let source_region = layout[1];
 
         let term_block = term_block.borders(Borders::TOP | Borders::LEFT);
-        Paragraph::new(term_text)
+        Paragraph::new(term_lines)
             .block(term_block)
             .scroll((term_scroll, 0))
             .render(term_region, buf);
         render_source_region(location, source_region, buf);
     } else {
+        let term_text = term.to_string();
+        let max_term_scroll = term_text.lines().count() as u16 - 1;
+        if term_scroll > max_term_scroll {
+            term_scroll = max_term_scroll;
+        }
+
         Paragraph::new(term_text)
             .block(term_block)
             .scroll((term_scroll, 0))
@@ -321,7 +371,7 @@ fn render_term_region(
 
 fn render_source_region(location: &str, source_region: Rect, buf: &mut Buffer) {
     let source_block = Block::default()
-        .title(" Source ".fg(Color::Reset))
+        .title(" Source Location ".fg(Color::Reset))
         .borders(Borders::TOP | Borders::LEFT | Borders::BOTTOM)
         .border_set(border::PLAIN);
 
@@ -351,7 +401,7 @@ fn render_context_region(
         .border_set(top_right_border_set);
 
     let context_text = utils::context_to_string(context.clone());
-    let max_context_scroll = context_text.split('\n').count() as u16 - 1;
+    let max_context_scroll = context_text.lines().count() as u16 - 1;
     if context_scroll > max_context_scroll {
         context_scroll = max_context_scroll;
     }
@@ -385,7 +435,7 @@ fn render_env_region(
         .border_set(collapsed_top_and_left_border_set);
 
     let env_text = utils::env_to_string(env);
-    let max_env_scroll = env_text.split('\n').count() as u16 - 1;
+    let max_env_scroll = env_text.lines().count() as u16 - 1;
     if env_scroll > max_env_scroll {
         env_scroll = max_env_scroll;
     }
@@ -414,4 +464,46 @@ fn render_clear_popup_region(area: Rect, ret_value: Option<&Value>, buf: &mut Bu
             .block(ret_block)
             .render(popup_area, buf);
     }
+}
+
+fn split_text(text: &str) -> Vec<Line<'_>> {
+    text.lines().map(|i| i.into()).collect()
+}
+
+fn pad_lines_with_spaces(text: &str, line_width: usize) -> String {
+    let mut result: Vec<String> = vec![];
+    for line in text.lines() {
+        let full_lines = line.len() / line_width;
+        let remaining_chars = line.len() % line_width;
+        let total_lines = full_lines + if remaining_chars > 0 { 1 } else { 0 };
+        let total_chars = total_lines * line_width;
+        result.push(
+            line.chars()
+                .chain(iter::repeat(' '))
+                .take(total_chars)
+                .collect(),
+        );
+    }
+    result.join("\n")
+}
+
+fn highlight_text(text: &str, line: usize, column: usize) -> Vec<Line<'_>> {
+    text.split('\n')
+        .enumerate()
+        .map(|(line_number, line_text)| {
+            if line_number + 1 != line {
+                line_text.into()
+            } else {
+                let (before, at_after) = line_text.split_at(column - 1);
+                let (at, after) = at_after.split_at(1);
+
+                vec![
+                    before.bg(Color::DarkGray),
+                    at.bg(Color::Gray).underlined(),
+                    after.bg(Color::DarkGray),
+                ]
+                .into()
+            }
+        })
+        .collect()
 }

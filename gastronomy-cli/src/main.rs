@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 use anyhow::Result;
 use app::App;
@@ -26,6 +26,8 @@ enum Commands {
         parameters: Vec<String>,
         #[clap(long)]
         index: Option<usize>,
+        #[clap(long)]
+        source_root: Option<PathBuf>,
     },
 }
 
@@ -51,6 +53,7 @@ async fn run() -> Result<(), anyhow::Error> {
             file,
             parameters,
             index,
+            source_root,
         }) => {
             let mut raw_programs = gastronomy::uplc::load_programs_from_file(&file, query).await?;
             let raw_program = raw_programs.remove(index.unwrap_or_default());
@@ -64,11 +67,18 @@ async fn run() -> Result<(), anyhow::Error> {
             let frames =
                 gastronomy::execution_trace::parse_raw_frames(&states, &applied_program.source_map);
 
+            let source_files = if let Some(source_root) = source_root {
+                gastronomy::execution_trace::read_source_files(&source_root, &frames)
+            } else {
+                BTreeMap::new()
+            };
+
             let mut terminal = utils::init()?;
             let mut app = App {
                 file_name: file,
                 cursor: 0,
                 frames,
+                source_files,
                 exit: false,
                 ..Default::default()
             };
