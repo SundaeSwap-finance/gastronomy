@@ -18,6 +18,13 @@ GUI:
 gastronomy
 ```
 
+### Configuration.
+
+The app will read configuration from environment variables, or from a `.gastronomyrc.toml` file in your home directory.
+|Setting|Environment variable|Description|
+|---|---|---|
+|`blockfrost.key`|`BLOCKFROST_KEY`|The API key to use when querying Blockfrost.|
+
 ## Features
 
 Below you will find the planned and completed features for the Gastronomy debugger:

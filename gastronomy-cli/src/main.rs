@@ -32,7 +32,9 @@ enum Commands {
 }
 
 fn load_config() -> Result<Config> {
-    let config = load_base_config().merge(Env::raw().split("_")).extract()?;
+    let config = load_base_config()
+        .merge(Env::raw().ignore(&["BLOCKFROST"]).split("_"))
+        .extract()?;
     Ok(config)
 }
 

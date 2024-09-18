@@ -32,7 +32,7 @@ fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, InvokeError> {
         figment = figment.merge(Serialized::defaults(saved));
     }
     let config = figment
-        .merge(Env::raw())
+        .merge(Env::raw().ignore(&["BLOCKFROST"]).split("_"))
         .extract()
         .map_err(|e| InvokeError::from(e.to_string()))?;
     Ok(config)
