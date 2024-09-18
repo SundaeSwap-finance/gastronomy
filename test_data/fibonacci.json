@@ -1,5 +1,5 @@
 {
-  "name": "hello_world.fibonacci",
+  "name": "fibonacci.fibonacci",
   "parameters": [
     {
       "title": "n",
@@ -8,53 +8,11 @@
       }
     }
   ],
-  "compiledCode": "58990100003232232515333003513370ea2002a290000a8a40002a666006a266e1d4400545200215148008544c8c8cdc0289a8800a899b8151003514801144d4400544cdc0a8801a8a4004600200244a2a66600aa266e1d440054520001514800054ccc01544cdc3a8800a8a40042a290010a899b805135130020025133702a2002a29002289a898010012899b81510015148008dd6800ab9a5739",
-  "hash": "7dd9043a07012f0332eba3cc7ea4d7fa7e0ad1ad58ce0015424e7cfc",
+  "compiledCode": "586f0101003223253330033370e00290000a40002a66600666e1c00520021480084c8c8cdc0180099b800034800cc004cdc0001a4002600200244a66600a66e1c005200014800054ccc014cdc3800a400429001099b80330020023370000290019980100119b8000148004dd6800ab9a01",
+  "hash": "bad25cb9469321d5500a1b9a5f6419b8f7c6bbf2826b0bd0ec1b39cc",
   "definitions": {
     "Int": {
       "dataType": "integer"
     }
-  },
-  "sourceMap": {
-    "8": "hello_world.ak:15:3",
-    "15": "hello_world.ak:15:6",
-    "20": "hello_world.ak:15:6",
-    "23": "hello_world.ak:15:11",
-    "27": "hello_world.ak:16:5",
-    "36": "hello_world.ak:17:13",
-    "41": "hello_world.ak:17:13",
-    "44": "hello_world.ak:17:18",
-    "48": "hello_world.ak:18:5",
-    "52": "hello_world.ak:20:5",
-    "61": "hello_world.ak:20:5",
-    "64": "hello_world.ak:20:5",
-    "67": "hello_world.ak:20:15",
-    "72": "hello_world.ak:20:15",
-    "75": "hello_world.ak:20:19",
-    "78": "hello_world.ak:20:24",
-    "81": "hello_world.ak:20:24",
-    "84": "hello_world.ak:20:34",
-    "89": "hello_world.ak:20:34",
-    "92": "hello_world.ak:20:38",
-    "100": "hello_world.ak:15:3",
-    "107": "hello_world.ak:15:6",
-    "112": "hello_world.ak:15:6",
-    "115": "hello_world.ak:15:11",
-    "119": "hello_world.ak:16:5",
-    "128": "hello_world.ak:17:13",
-    "133": "hello_world.ak:17:13",
-    "136": "hello_world.ak:17:18",
-    "140": "hello_world.ak:18:5",
-    "144": "hello_world.ak:20:5",
-    "149": "hello_world.ak:20:5",
-    "152": "hello_world.ak:20:5",
-    "157": "hello_world.ak:20:15",
-    "162": "hello_world.ak:20:15",
-    "165": "hello_world.ak:20:19",
-    "168": "hello_world.ak:20:24",
-    "171": "hello_world.ak:20:24",
-    "176": "hello_world.ak:20:34",
-    "181": "hello_world.ak:20:34",
-    "184": "hello_world.ak:20:38"
   }
 }
