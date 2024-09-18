@@ -8,11 +8,53 @@
       }
     }
   ],
-  "compiledCode": "586f0101003223253330033370e00290000a40002a66600666e1c00520021480084c8c8cdc0180099b800034800cc004cdc0001a4002600200244a66600a66e1c005200014800054ccc014cdc3800a400429001099b80330020023370000290019980100119b8000148004dd6800ab9a01",
-  "hash": "bad25cb9469321d5500a1b9a5f6419b8f7c6bbf2826b0bd0ec1b39cc",
+  "compiledCode": "58990101003232232515333003513370ea2002a290000a8a40002a666006a266e1d4400545200215148008544c8c8cdc0289a8800a899b8151003514801144d4400544cdc0a8801a8a4004600200244a2a66600aa266e1d440054520001514800054ccc01544cdc3a8800a8a40042a290010a899b805135130020025133702a2002a29002289a898010012899b81510015148008dd6800ab9a5739",
+  "hash": "26291edc8369078249d89005f6aeacae840e0a05b26e7609e66c0b0f",
   "definitions": {
     "Int": {
       "dataType": "integer"
     }
+  },
+  "sourceMap": {
+    "8": "fibonacci.ak:2:3",
+    "15": "fibonacci.ak:2:6",
+    "20": "fibonacci.ak:2:6",
+    "23": "fibonacci.ak:2:11",
+    "27": "fibonacci.ak:3:5",
+    "36": "fibonacci.ak:4:13",
+    "41": "fibonacci.ak:4:13",
+    "44": "fibonacci.ak:4:18",
+    "48": "fibonacci.ak:5:5",
+    "52": "fibonacci.ak:7:5",
+    "61": "fibonacci.ak:7:5",
+    "64": "fibonacci.ak:7:5",
+    "67": "fibonacci.ak:7:15",
+    "72": "fibonacci.ak:7:15",
+    "75": "fibonacci.ak:7:19",
+    "78": "fibonacci.ak:7:24",
+    "81": "fibonacci.ak:7:24",
+    "84": "fibonacci.ak:7:34",
+    "89": "fibonacci.ak:7:34",
+    "92": "fibonacci.ak:7:38",
+    "100": "fibonacci.ak:2:3",
+    "107": "fibonacci.ak:2:6",
+    "112": "fibonacci.ak:2:6",
+    "115": "fibonacci.ak:2:11",
+    "119": "fibonacci.ak:3:5",
+    "128": "fibonacci.ak:4:13",
+    "133": "fibonacci.ak:4:13",
+    "136": "fibonacci.ak:4:18",
+    "140": "fibonacci.ak:5:5",
+    "144": "fibonacci.ak:7:5",
+    "149": "fibonacci.ak:7:5",
+    "152": "fibonacci.ak:7:5",
+    "157": "fibonacci.ak:7:15",
+    "162": "fibonacci.ak:7:15",
+    "165": "fibonacci.ak:7:19",
+    "168": "fibonacci.ak:7:24",
+    "171": "fibonacci.ak:7:24",
+    "176": "fibonacci.ak:7:34",
+    "181": "fibonacci.ak:7:34",
+    "184": "fibonacci.ak:7:38"
   }
 }
