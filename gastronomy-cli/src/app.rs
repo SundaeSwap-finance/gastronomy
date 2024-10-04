@@ -457,7 +457,8 @@ fn render_env_region(
         .border_set(collapsed_top_and_left_border_set);
 
     let env_text = utils::env_to_string(env);
-    let max_env_scroll = env_text.lines().count() as u16 - 1;
+    let line_count = env_text.lines().count() as u16;
+    let max_env_scroll = if line_count == 0 { line_count } else { line_count - 1 };
     if env_scroll > max_env_scroll {
         env_scroll = max_env_scroll;
     }
