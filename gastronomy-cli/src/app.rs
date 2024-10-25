@@ -67,6 +67,15 @@ impl<'a> App<'a> {
                     KeyCode::Char('q') => {
                         self.exit = true;
                     }
+                    KeyCode::Char('e') | KeyCode::Char('E') => {
+                        if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
+                            if self.view_source {
+                                self.cursor = self.source_token_indices.iter().last().copied().unwrap_or(self.frames.len() - 1);
+                            } else {
+                                self.cursor = self.frames.len() - 1;
+                            }
+                        }
+                    }
                     KeyCode::Char('N') | KeyCode::Char('n') | KeyCode::Right => {
                         if self.view_source {
                             self.cursor = self
