@@ -210,7 +210,7 @@ impl ChainQueryImpl for Blockfrost {
                     .await?;
                 let bytes = hex::decode(script["cbor"].as_str().unwrap()).unwrap();
                 Some(CborWrap(PseudoScript::PlutusV2Script(
-                    conway::PlutusV2Script(bytes.into()),
+                    conway::PlutusScript(bytes.into()),
                 )))
             } else {
                 None

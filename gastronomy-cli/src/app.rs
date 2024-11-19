@@ -70,7 +70,12 @@ impl<'a> App<'a> {
                     KeyCode::Char('e') | KeyCode::Char('E') => {
                         if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
                             if self.view_source {
-                                self.cursor = self.source_token_indices.iter().last().copied().unwrap_or(self.frames.len() - 1);
+                                self.cursor = self
+                                    .source_token_indices
+                                    .iter()
+                                    .last()
+                                    .copied()
+                                    .unwrap_or(self.frames.len() - 1);
                             } else {
                                 self.cursor = self.frames.len() - 1;
                             }
@@ -208,7 +213,7 @@ fn render_block_region(
     area: Rect,
     buf: &mut Buffer,
 ) -> Rc<[Rect]> {
-    let title = Title::from(vec![
+    let title = Line::from(vec![
         " Gastronomy Debugger (".bold(),
         file_name.to_str().unwrap().bold(),
         ")".bold(),
@@ -226,15 +231,11 @@ fn render_block_region(
         " Quit ".into(),
         "<Q> ".blue().bold(),
     ]);
-    let instructions = Title::from(Line::from(instructions));
+    let instructions = Line::from(instructions);
 
     let block = Block::default()
-        .title(title.alignment(Alignment::Center))
-        .title(
-            instructions
-                .alignment(Alignment::Center)
-                .position(block::Position::Bottom),
-        )
+        .title(title.centered())
+        .title_bottom(instructions.centered())
         .borders(Borders::ALL)
         .border_set(border::THICK);
 
@@ -467,7 +468,11 @@ fn render_env_region(
 
     let env_text = utils::env_to_string(env);
     let line_count = env_text.lines().count() as u16;
-    let max_env_scroll = if line_count == 0 { line_count } else { line_count - 1 };
+    let max_env_scroll = if line_count == 0 {
+        line_count
+    } else {
+        line_count - 1
+    };
     if env_scroll > max_env_scroll {
         env_scroll = max_env_scroll;
     }

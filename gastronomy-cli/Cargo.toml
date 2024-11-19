@@ -15,9 +15,9 @@ color-eyre = "0.6"
 crossterm = "0.28"
 figment = { version = "0.10", features = ["env", "toml"] }
 gastronomy = { path = "../gastronomy" }
-ratatui = { version = "0.28", features = ["all-widgets"] }
-tokio = { version = "1.40", features = ["full"] }
-uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "3c2ae7c" }
+ratatui = { version = "0.29", features = ["all-widgets"] }
+tokio = { version = "1.41", features = ["full"] }
+uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "7c495c9b" }
 # uplc = { path = "../../aiken/crates/uplc" }
 
 [package.metadata.dist]
