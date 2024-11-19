@@ -6,7 +6,7 @@ use pallas::ledger::primitives::conway::{Language, MintedTx};
 use serde::Deserialize;
 pub use uplc::ast::Program;
 use uplc::{
-    ast::{FakeNamedDeBruijn, NamedDeBruijn},
+    ast::{DeBruijn, FakeNamedDeBruijn, Name, NamedDeBruijn},
     machine::{
         cost_model::{CostModel, ExBudget},
         indexed_term::IndexedTerm,
@@ -49,6 +49,18 @@ fn identify_file_type(file: &Path) -> Result<FileType> {
     }
 }
 
+fn fix_names(program: Program<NamedDeBruijn>) -> Result<Program<NamedDeBruijn>> {
+    let debruijn: Program<DeBruijn> = program.into();
+    let name: Program<Name> = debruijn.try_into()?;
+    let named_de_bruijn: Program<NamedDeBruijn> = name.try_into()?;
+    Ok(named_de_bruijn)
+}
+
+fn load_flat(bytes: &[u8]) -> Result<Program<NamedDeBruijn>> {
+    let fake_named_de_bruijn: Program<FakeNamedDeBruijn> = Program::from_flat(bytes)?;
+    Ok(fake_named_de_bruijn.into())
+}
+
 pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<Vec<LoadedProgram>> {
     let filename = file.display().to_string();
     match identify_file_type(file)? {
@@ -64,7 +76,7 @@ pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<V
         }
         FileType::Flat => {
             let bytes = std::fs::read(file)?;
-            let program = Program::<FakeNamedDeBruijn>::from_flat(&bytes)?.into();
+            let program = fix_names(load_flat(&bytes)?)?;
             let source_map = BTreeMap::new();
             Ok(vec![LoadedProgram {
                 filename,
@@ -76,7 +88,7 @@ pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<V
             let export: AikenExport = serde_json::from_slice(&fs::read(file)?)?;
             let bytes = hex::decode(&export.compiled_code)?;
             let cbor: ByteVec = minicbor::decode(&bytes)?;
-            let program = Program::<FakeNamedDeBruijn>::from_flat(&cbor)?.into();
+            let program = fix_names(load_flat(&cbor)?)?;
             let source_map = export.source_map.unwrap_or_default();
             Ok(vec![LoadedProgram {
                 filename,
@@ -119,15 +131,15 @@ async fn load_programs_from_tx(
     let slot_config = query.get_slot_config()?;
     println!("resolved inputs");
 
-    Ok(tx_to_programs(&tx, &resolved_inputs, &slot_config)
-        .unwrap()
-        .drain(..)
-        .map(|p| LoadedProgram {
+    let mut programs = vec![];
+    for (_, program, _) in tx_to_programs(&tx, &resolved_inputs, &slot_config).unwrap() {
+        programs.push(LoadedProgram {
             filename: filename.clone(),
-            program: p.1,
+            program: fix_names(program)?,
             source_map: BTreeMap::new(),
-        })
-        .collect())
+        });
+    }
+    Ok(programs)
 }
 
 pub fn parse_parameter(index: usize, parameter: String) -> Result<PlutusData> {
