@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, path::PathBuf};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use app::App;
 use clap::{command, Parser, Subcommand};
 use figment::providers::Env;
@@ -58,6 +58,18 @@ async fn run() -> Result<(), anyhow::Error> {
             source_root,
         }) => {
             let mut raw_programs = gastronomy::uplc::load_programs_from_file(&file, query).await?;
+            let index = index.or(if raw_programs.len() == 1 {
+                None
+            } else {
+                Some(0)
+            });
+            if index.unwrap_or_default() >= raw_programs.len() {
+                bail!(
+                    "Invalid index #{}, tx only has {} redeemer(s)",
+                    index.unwrap_or_default(),
+                    raw_programs.len()
+                );
+            }
             let raw_program = raw_programs.remove(index.unwrap_or_default());
             let arguments = parameters
                 .iter()
@@ -80,6 +92,7 @@ async fn run() -> Result<(), anyhow::Error> {
             let mut terminal = utils::init()?;
             let mut app = App {
                 file_name: file,
+                index,
                 cursor: 0,
                 frames,
                 source_files,

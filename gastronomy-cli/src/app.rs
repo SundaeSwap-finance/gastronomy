@@ -31,6 +31,7 @@ impl Default for Focus {
 #[derive(Default)]
 pub struct App<'a> {
     pub file_name: PathBuf,
+    pub index: Option<usize>,
     pub cursor: usize,
     pub frames: Vec<RawFrame<'a>>,
     pub source_files: BTreeMap<String, String>,
@@ -164,7 +165,7 @@ impl<'a> Widget for &mut App<'a> {
         let location = curr_frame.location;
         let ret_value = curr_frame.ret_value;
 
-        let layout = render_block_region(self.file_name.clone(), location, area, buf);
+        let layout = render_block_region(self.file_name.clone(), self.index, location, area, buf);
 
         let gauge_region = layout[0];
         let command_region = layout[1];
@@ -209,6 +210,7 @@ impl<'a> Widget for &mut App<'a> {
 
 fn render_block_region(
     file_name: PathBuf,
+    index: Option<usize>,
     location: Option<&String>,
     area: Rect,
     buf: &mut Buffer,
@@ -216,6 +218,7 @@ fn render_block_region(
     let title = Line::from(vec![
         " Gastronomy Debugger (".bold(),
         file_name.to_str().unwrap().bold(),
+        index.map(|i| format!(" #{i}")).unwrap_or_default().bold(),
         ")".bold(),
     ]);
     let mut instructions = if location.is_some() {
