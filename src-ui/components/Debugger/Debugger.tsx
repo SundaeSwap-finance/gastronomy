@@ -210,7 +210,7 @@ const Debugger: FC<IDebuggerProps> = ({
   }, []);
 
   useEffect(() => {
-    identifier && fetchFrames(identifier);
+    if (identifier) fetchFrames(identifier);
   }, [identifier, fetchFrames]);
 
   useEffect(() => {
