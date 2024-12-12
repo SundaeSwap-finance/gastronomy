@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::iter;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -27,6 +28,16 @@ impl Default for Focus {
         Self::Term
     }
 }
+impl Display for Focus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            Self::Term => "Term",
+            Self::Context => "Context",
+            Self::Env => "Env",
+        };
+        f.write_str(str)
+    }
+}
 
 #[derive(Default)]
 pub struct App<'a> {
@@ -45,7 +56,7 @@ pub struct App<'a> {
     pub return_scroll: u16,
 }
 
-impl<'a> App<'a> {
+impl App<'_> {
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut utils::Tui) -> io::Result<()> {
         while !self.exit {
@@ -124,6 +135,34 @@ impl<'a> App<'a> {
                             self.cursor = self.cursor.saturating_sub(stride);
                         }
                     }
+                    KeyCode::Char('C') | KeyCode::Char('c') => {
+                        let curr_frame = &self.frames[self.cursor];
+                        let text = match self.focus {
+                            Focus::Term => {
+                                let term_text = curr_frame.term.to_string();
+                                if self.view_source {
+                                    curr_frame
+                                        .location
+                                        .map(|loc| {
+                                            let (file, _, _) = parse_location(loc);
+                                            self.source_files
+                                                .get(file)
+                                                .map(|c| c.as_str())
+                                                .unwrap_or("File not found")
+                                                .to_string()
+                                        })
+                                        .unwrap_or(term_text)
+                                } else {
+                                    term_text
+                                }
+                            }
+                            Focus::Context => utils::context_to_string(curr_frame.context.clone()),
+                            Focus::Env => utils::env_to_string(curr_frame.env),
+                        };
+                        if let Err(e) = terminal_clipboard::set_string(text) {
+                            eprintln!("Could not copy to clipboard: {e}");
+                        };
+                    }
                     KeyCode::Char('v') => {
                         self.view_source = !self.view_source;
                     }
@@ -155,7 +194,7 @@ impl<'a> App<'a> {
     }
 }
 
-impl<'a> Widget for &mut App<'a> {
+impl Widget for &mut App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let curr_frame = &self.frames[self.cursor];
         let label = curr_frame.label;
@@ -165,7 +204,14 @@ impl<'a> Widget for &mut App<'a> {
         let location = curr_frame.location;
         let ret_value = curr_frame.ret_value;
 
-        let layout = render_block_region(self.file_name.clone(), self.index, location, area, buf);
+        let layout = render_block_region(
+            self.file_name.clone(),
+            self.index,
+            location,
+            area,
+            self.focus,
+            buf,
+        );
 
         let gauge_region = layout[0];
         let command_region = layout[1];
@@ -213,6 +259,7 @@ fn render_block_region(
     index: Option<usize>,
     location: Option<&String>,
     area: Rect,
+    focus: Focus,
     buf: &mut Buffer,
 ) -> Rc<[Rect]> {
     let title = Line::from(vec![
@@ -227,6 +274,8 @@ fn render_block_region(
         vec![]
     };
     instructions.extend([
+        format!(" Copy {focus} ").into(),
+        "<C>".blue().bold(),
         " Next ".into(),
         "<N>".blue().bold(),
         " Previous ".into(),
@@ -354,10 +403,7 @@ fn render_term_region(
         let mut term_text = String::new();
 
         let term_lines = if view_source {
-            let mut pieces = location.split(":");
-            let file = pieces.next().unwrap();
-            let line = pieces.next().unwrap().parse().unwrap();
-            let column = pieces.next().unwrap().parse().unwrap();
+            let (file, line, column) = parse_location(location);
 
             let old_term_text = source_files
                 .get(file)
@@ -546,4 +592,12 @@ fn highlight_text(text: &str, line: usize, column: usize) -> Vec<Line<'_>> {
             }
         })
         .collect()
+}
+
+fn parse_location(location: &str) -> (&str, usize, usize) {
+    let mut pieces = location.split(":");
+    let file = pieces.next().unwrap();
+    let line = pieces.next().unwrap().parse().unwrap();
+    let column = pieces.next().unwrap().parse().unwrap();
+    (file, line, column)
 }
