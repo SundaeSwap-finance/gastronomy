@@ -34,8 +34,7 @@ Below you will find the planned and completed features for the Gastronomy debugg
   - [x] Loading UPLC pretty printed programs
   - [x] Passing hex encoded arguments
   - [x] Spent and single-step budgets
-  - [ ] Loading transactions with a script context
-  - [ ] Better command line arguments
+  - [x] Loading transactions with a script context
 - [x] Step through debugging
   - [x] Step forward
   - [x] Display current term
@@ -50,12 +49,12 @@ Below you will find the planned and completed features for the Gastronomy debugg
   - [ ] Step to where environment variable introduced
   - [ ] Step backwards through context stack
   - [ ] Step forwards through context stack
-- [ ] Graphical interface
-  - [ ] Desktop application
+- [x] Graphical interface
+  - [x] Desktop application
   - [ ] Custom renderers for some terms
   - [ ] Better "cause and effect" visualization
   - [ ] Budget heat-map
-- [ ] Sourcemap integration
-  - [ ] Aiken integration
+- [x] Sourcemap integration
+  - [x] Aiken integration (via Aiken fork, contact us!)
   - [ ] Plu-ts integration
 
