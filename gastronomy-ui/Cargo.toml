@@ -9,16 +9,16 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.5.3", features = [] }
+tauri-build = { version = "1.5.6", features = [] }
 
 [dependencies]
 dashmap = "6"
 figment = { version = "0.10", features = ["env", "toml"] }
 gastronomy = { path = "../gastronomy" }
-pallas-codec = "0.31"
+pallas-codec = "0.32"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.7.0", features = [ "dialog-message", "dialog-open"] }
+tauri = { version = "1.8.2", features = [ "dialog-message", "dialog-open"] }
 tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 tokio = "1.41"
 uuid = { version = "1", features = ["v4"] }
