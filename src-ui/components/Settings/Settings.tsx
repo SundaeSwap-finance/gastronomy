@@ -1,10 +1,4 @@
-import {
-  ChangeEvent,
-  FC,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { ChangeEvent, FC, useCallback, useEffect, useState } from "react";
 import { Store } from "@tauri-apps/plugin-store";
 import { ISettings } from "../../types";
 import objectPath from "object-path";
@@ -61,7 +55,7 @@ const Settings: FC<ISettingsProps> = ({ isOpen, onClose }) => {
       return;
     }
     (async () => {
-      const data = await store.get<ISettings>("config") ?? {};
+      const data = (await store.get<ISettings>("config")) ?? {};
       setConfig(data);
     })();
   }, [store]);
