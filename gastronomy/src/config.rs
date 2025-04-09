@@ -1,5 +1,5 @@
-use figment::providers::{Format, Toml};
 pub use figment::Figment;
+use figment::providers::{Format, Toml};
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]

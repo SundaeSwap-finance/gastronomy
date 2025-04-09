@@ -9,9 +9,9 @@ use execution_trace::ExecutionTrace;
 use figment::providers::{Env, Serialized};
 use gastronomy::{
     chain_query::ChainQuery,
-    config::{load_base_config, Config},
+    config::{Config, load_base_config},
 };
-use tauri::{ipc::InvokeError, State};
+use tauri::{State, ipc::InvokeError};
 use tauri_plugin_store::StoreExt;
 
 mod api;
@@ -22,7 +22,9 @@ struct SessionState {
 }
 
 fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, InvokeError> {
-    let saved_config = app_handle.get_store("settings.json").and_then(|s| s.get("config"));
+    let saved_config = app_handle
+        .get_store("settings.json")
+        .and_then(|s| s.get("config"));
     let mut figment = load_base_config();
     if let Some(saved) = saved_config {
         figment = figment.merge(Serialized::defaults(saved));
@@ -35,10 +37,10 @@ fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, InvokeError> {
 }
 
 #[tauri::command]
-async fn create_traces<'a>(
+async fn create_traces(
     file: &Path,
     parameters: Vec<String>,
-    state: State<'a, SessionState>,
+    state: State<'_, SessionState>,
     app_handle: tauri::AppHandle,
 ) -> Result<CreateTraceResponse, InvokeError> {
     println!("Creating traces {:?} {:?}", file, parameters);

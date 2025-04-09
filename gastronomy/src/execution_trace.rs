@@ -9,7 +9,7 @@ use anyhow::Result;
 use serde::Serialize;
 use uplc::{
     ast::NamedDeBruijn,
-    machine::{indexed_term::IndexedTerm, Context, MachineState},
+    machine::{Context, MachineState, indexed_term::IndexedTerm},
 };
 
 use crate::{chain_query::ChainQuery, uplc::LoadedProgram};

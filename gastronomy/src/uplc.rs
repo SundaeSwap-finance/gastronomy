@@ -1,20 +1,20 @@
 use std::{collections::BTreeMap, ffi::OsStr, fs, path::Path};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use minicbor::bytes::ByteVec;
 use pallas::ledger::primitives::conway::{Language, MintedTx};
 use serde::Deserialize;
 pub use uplc::ast::Program;
 use uplc::{
+    Fragment, PlutusData,
     ast::{DeBruijn, FakeNamedDeBruijn, Name, NamedDeBruijn},
     machine::{
+        Machine, MachineState,
         cost_model::{CostModel, ExBudget},
         indexed_term::IndexedTerm,
-        Machine, MachineState,
     },
     parser,
     tx::tx_to_programs,
-    Fragment, PlutusData,
 };
 
 use crate::chain_query::ChainQuery;

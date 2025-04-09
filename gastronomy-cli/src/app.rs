@@ -13,9 +13,9 @@ use ratatui::{
     widgets::{block::*, *},
 };
 use uplc::ast::NamedDeBruijn;
+use uplc::machine::Context;
 use uplc::machine::indexed_term::IndexedTerm;
 use uplc::machine::value::Value;
-use uplc::machine::Context;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Focus {

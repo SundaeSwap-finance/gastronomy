@@ -1,12 +1,12 @@
 use std::{collections::BTreeMap, path::PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use app::App;
-use clap::{command, Parser, Subcommand};
+use clap::{Parser, Subcommand, command};
 use figment::providers::Env;
 use gastronomy::{
     chain_query::ChainQuery,
-    config::{load_base_config, Config},
+    config::{Config, load_base_config},
 };
 
 mod app;

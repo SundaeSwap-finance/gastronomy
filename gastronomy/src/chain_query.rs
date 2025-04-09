@@ -1,7 +1,7 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use blockfrost::{BlockfrostAPI, JsonValue};
 use pallas::{
-    applying::utils::{add_values, AlonzoError, ValidationError},
+    applying::utils::{AlonzoError, ValidationError, add_values},
     codec::utils::{Bytes, CborWrap, NonEmptyKeyValuePairs, PositiveCoin},
     ledger::{
         addresses::Address,
@@ -12,8 +12,8 @@ use pallas::{
 };
 use serde_json::from_str;
 use uplc::{
-    tx::{ResolvedInput, SlotConfig},
     Fragment, Hash, KeyValuePairs, PlutusData, TransactionInput, Value,
+    tx::{ResolvedInput, SlotConfig},
 };
 
 use crate::config::BlockfrostConfig;

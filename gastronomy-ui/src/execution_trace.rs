@@ -5,12 +5,12 @@ use std::{
 };
 
 use gastronomy::{
+    Frame,
     execution_trace::{
-        find_source_token_indices, parse_context, parse_env, parse_raw_frames, parse_uplc_value,
-        read_source_files, RawFrame,
+        RawFrame, find_source_token_indices, parse_context, parse_env, parse_raw_frames,
+        parse_uplc_value, read_source_files,
     },
     uplc::{self, LoadedProgram, Program},
-    Frame,
 };
 use pallas_codec::flat::Flat;
 use tauri::ipc::InvokeError;

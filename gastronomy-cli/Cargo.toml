@@ -1,7 +1,7 @@
 [package]
 name = "gastronomy-cli"
 version = "0.7.1"
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/SundaeSwap-finance/gastronomy"
 description = "Gastronomy CLI"
 publish = false
@@ -12,7 +12,7 @@ publish = false
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
 color-eyre = "0.6"
-crossterm = "0.28"
+crossterm = "0.29"
 figment = { version = "0.10", features = ["env", "toml"] }
 gastronomy = { path = "../gastronomy" }
 ratatui = { version = "0.29", features = ["all-widgets"] }
