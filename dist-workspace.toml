@@ -1,0 +1,29 @@
+[workspace]
+members = ["cargo:."]
+
+# Config for 'dist'
+[dist]
+# The preferred dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.28.3"
+# CI backends to support
+ci = "github"
+# The installers to generate for each app
+installers = []
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+# Which actions to run on pull requests
+pr-run-mode = "plan"
+# Extra setup steps to make tauri happy
+github-build-setup = "../setup/build-setup.yml"
+# Post-announce jobs to run in CI
+post-announce-jobs = ["./release_tauri"]
+
+[dist.github-custom-runners]
+x86_64-unknown-linux-gnu = "ubuntu-22.04"
+
+[dist.dependencies.apt]
+"libwebkit2gtk-4.0-dev" = "*"
+"libwebkit2gtk-4.1-dev" = "*"
+"libappindicator3-dev" = "*"
+"librsvg2-dev" = "*"
+"patchelf" = "*"

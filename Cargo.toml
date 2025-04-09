@@ -13,33 +13,6 @@ resolver = "2"
 inherits = "release"
 lto = "thin"
 
-# Config for 'cargo dist'
-[workspace.metadata.dist]
-# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.21.1"
-# CI backends to support
-ci = "github"
-# The installers to generate for each app
-installers = []
-# Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
-# Which actions to run on pull requests
-pr-run-mode = "plan"
-# Extra setup steps to make tauri happy
-github-build-setup = "../setup/build-setup.yml"
-# Publish tauri packages after everything else
-post-announce-jobs = ["./release_tauri"]
-
-[workspace.metadata.dist.github-custom-runners]
-x86_64-unknown-linux-gnu = "ubuntu-22.04"
-
-[workspace.metadata.dist.dependencies.apt]
-"libwebkit2gtk-4.0-dev" = "*"
-"libwebkit2gtk-4.1-dev" = "*"
-"libappindicator3-dev" = "*"
-"librsvg2-dev" = "*"
-"patchelf" = "*"
-
 [workspace.metadata.release]
 shared-version = true
 tag-name = "v{{version}}"
