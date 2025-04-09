@@ -1,6 +1,6 @@
 import { FC, useCallback, useEffect, useMemo, useState } from "react";
-import { invoke } from "@tauri-apps/api";
-import { message, open } from "@tauri-apps/api/dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { message, open } from "@tauri-apps/plugin-dialog";
 import cx from "classnames";
 import {
   IFrame,

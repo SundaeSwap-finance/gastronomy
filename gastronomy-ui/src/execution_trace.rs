@@ -13,7 +13,7 @@ use gastronomy::{
     Frame,
 };
 use pallas_codec::flat::Flat;
-use tauri::InvokeError;
+use tauri::ipc::InvokeError;
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 

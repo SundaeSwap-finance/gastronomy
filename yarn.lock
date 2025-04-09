@@ -584,10 +584,29 @@
   dependencies:
     prettier "^3.3.2"
 
-"@tauri-apps/api@1.6.0", "@tauri-apps/api@^1.6.0":
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/@tauri-apps/api/-/api-1.6.0.tgz#745b7e4e26782c3b2ad9510d558fa5bb2cf29186"
-  integrity sha512-rqI++FWClU5I2UBp4HXFvl+sBWkdigBkxnpJDQUWttNyG7IZP4FwQGhTNL5EOw0vI8i6eSAJ5frLqO7n7jbJdg==
+"@tauri-apps/api@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/api/-/api-2.0.0.tgz#a75768a578958210827aca752c804118a6a76f11"
+  integrity sha512-moKgCp2EX7X5GiOx/G/bmoEpkFQVVmyS98UaJU4xUVzan+E1BdwlAKcbip+cGldshYOqL4JSwAEN1OkRXeug0Q==
+
+"@tauri-apps/api@^2.0.0":
+  version "2.4.1"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/api/-/api-2.4.1.tgz#33b681a6fdb83f73fd8cb03bf94e71a5603ede1c"
+  integrity sha512-5sYwZCSJb6PBGbBL4kt7CnE5HHbBqwH+ovmOW6ZVju3nX4E3JX6tt2kRklFEH7xMOIwR0btRkZktuLhKvyEQYg==
+
+"@tauri-apps/plugin-dialog@~2":
+  version "2.2.1"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-dialog/-/plugin-dialog-2.2.1.tgz#7b4818dd2754c3a1a29a98cab5f8166e1591f2ac"
+  integrity sha512-wZmCouo4PgTosh/UoejPw9DPs6RllS5Pp3fuOV2JobCu36mR5AXU2MzU9NZiVaFi/5Zfc8RN0IhcZHnksJ1o8A==
+  dependencies:
+    "@tauri-apps/api" "^2.0.0"
+
+"@tauri-apps/plugin-store@~2":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@tauri-apps/plugin-store/-/plugin-store-2.2.0.tgz#e7cddd3692bdb3e8625b77d70dbede76b31d0986"
+  integrity sha512-hJTRtuJis4w5fW1dkcgftsYxKXK0+DbAqurZ3CURHG5WkAyyZgbxpeYctw12bbzF9ZbZREXZklPq8mocCC3Sgg==
+  dependencies:
+    "@tauri-apps/api" "^2.0.0"
 
 "@types/babel__core@^7.20.5":
   version "7.20.5"
@@ -3100,12 +3119,6 @@ tailwindcss@^3.4.10:
     postcss-selector-parser "^6.1.2"
     resolve "^1.22.8"
     sucrase "^3.35.0"
-
-"tauri-plugin-store-api@github:tauri-apps/tauri-plugin-store#v1":
-  version "0.0.0"
-  resolved "https://codeload.github.com/tauri-apps/tauri-plugin-store/tar.gz/a599aee9b0ec92c68ac992ca25084c205ef468eb"
-  dependencies:
-    "@tauri-apps/api" "1.6.0"
 
 thenify-all@^1.0.0:
   version "1.6.0"

@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use api::{CreateTraceResponse, GetFrameResponse, GetSourceResponse, GetTraceSummaryResponse};
 use dashmap::DashMap;
@@ -11,8 +11,8 @@ use gastronomy::{
     chain_query::ChainQuery,
     config::{load_base_config, Config},
 };
-use tauri::{InvokeError, Manager, State, Wry};
-use tauri_plugin_store::{with_store, StoreBuilder, StoreCollection};
+use tauri::{ipc::InvokeError, State};
+use tauri_plugin_store::StoreExt;
 
 mod api;
 mod execution_trace;
@@ -22,11 +22,7 @@ struct SessionState {
 }
 
 fn load_config(app_handle: &tauri::AppHandle) -> Result<Config, InvokeError> {
-    let stores = app_handle.state::<StoreCollection<Wry>>();
-    let path = PathBuf::from("settings.json");
-    let saved_config = with_store(app_handle.clone(), stores, path, |store| {
-        Ok(store.get("config").cloned())
-    })?;
+    let saved_config = app_handle.get_store("settings.json").and_then(|s| s.get("config"));
     let mut figment = load_base_config();
     if let Some(saved) = saved_config {
         figment = figment.merge(Serialized::defaults(saved));
@@ -121,10 +117,11 @@ fn main() {
     tauri::async_runtime::set(runtime.handle().clone());
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            let mut store = StoreBuilder::new(app.handle(), "settings.json".parse()?).build();
-            let load_res = store.load();
+            let store = app.store("settings.json")?;
+            let load_res = store.reload();
             if let Err(tauri_plugin_store::Error::Io(e)) = &load_res {
                 if e.kind() == std::io::ErrorKind::NotFound {
                     return Ok(());

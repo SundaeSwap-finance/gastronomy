@@ -3,10 +3,9 @@ import {
   FC,
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
-import { Store } from "tauri-plugin-store-api";
+import { Store } from "@tauri-apps/plugin-store";
 import { ISettings } from "../../types";
 import objectPath from "object-path";
 import Modal from "../Modal";
@@ -19,8 +18,11 @@ interface ISettingsProps {
 const Settings: FC<ISettingsProps> = ({ isOpen, onClose }) => {
   const [config, setConfig] = useState<ISettings | null>(null);
 
-  const store = useMemo(() => {
-    return new Store("settings.json");
+  const [store, setStore] = useState<Store | null>(null);
+  useEffect(() => {
+    (async () => {
+      setStore(await Store.load("settings.json"));
+    })();
   }, []);
 
   const onSettingChanged = useCallback(
@@ -43,6 +45,9 @@ const Settings: FC<ISettingsProps> = ({ isOpen, onClose }) => {
   );
 
   const saveSettings = useCallback(async () => {
+    if (!store) {
+      return;
+    }
     try {
       await store.set("config", config);
       await store.save();
@@ -52,8 +57,11 @@ const Settings: FC<ISettingsProps> = ({ isOpen, onClose }) => {
   }, [store, config]);
 
   useEffect(() => {
+    if (!store) {
+      return;
+    }
     (async () => {
-      const data = await store.get<ISettings>("config");
+      const data = await store.get<ISettings>("config") ?? {};
       setConfig(data);
     })();
   }, [store]);

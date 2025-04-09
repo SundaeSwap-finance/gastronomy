@@ -1,4 +1,4 @@
-import { open } from "@tauri-apps/api/dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Dispatch, FC, SetStateAction } from "react";
 
 interface IFilePickerProps {
