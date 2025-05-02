@@ -12,7 +12,10 @@ use uplc::{
     machine::{Context, MachineState, indexed_term::IndexedTerm},
 };
 
-use crate::{chain_query::ChainQuery, uplc::LoadedProgram};
+use crate::{
+    chain_query::ChainQuery,
+    uplc::{LoadedProgram, ScriptOverride},
+};
 
 pub type Value = String;
 
@@ -48,9 +51,11 @@ pub async fn load_file(
     filename: &Path,
     parameters: &[String],
     query: ChainQuery,
+    script_overrides: Vec<ScriptOverride>,
 ) -> Result<Vec<LoadedProgram>> {
     println!("from file");
-    let raw_programs = crate::uplc::load_programs_from_file(filename, query).await?;
+    let raw_programs =
+        crate::uplc::load_programs_from_file(filename, query, script_overrides).await?;
     let mut programs = vec![];
 
     println!("{} program(s)", raw_programs.len());

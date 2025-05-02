@@ -41,6 +41,13 @@ export interface IBlockfrostSettings {
   key: string;
 }
 
+export interface IScriptOverride {
+  filePath: string;
+  fromHash: string;
+  scriptVersion: 1 | 2 | 3;
+}
+
 export interface ISettings {
   blockfrost?: IBlockfrostSettings;
+  scriptOverrides?: IScriptOverride[];
 }

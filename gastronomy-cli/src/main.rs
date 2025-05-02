@@ -7,6 +7,7 @@ use figment::providers::Env;
 use gastronomy::{
     chain_query::ChainQuery,
     config::{Config, load_base_config},
+    uplc::ScriptOverride,
 };
 
 mod app;
@@ -28,6 +29,12 @@ enum Commands {
         index: Option<usize>,
         #[clap(long)]
         source_root: Option<PathBuf>,
+        #[clap(long)]
+        /// A mapping (colon-separated) from a script hash (in the transaction) to a file containing the cbor bytes of another script and the plutus version of the script.
+        /// For example:`d27cee75:script.cbor:3`
+        /// *Only supported by transaction ID and transaction files*
+        #[clap(long("script-override"), value_name = "FROM:TO:VERSION", num_args(0..), verbatim_doc_comment)]
+        script_overrides: Vec<String>,
     },
 }
 
@@ -56,8 +63,14 @@ async fn run() -> Result<(), anyhow::Error> {
             parameters,
             index,
             source_root,
+            script_overrides,
         }) => {
-            let mut raw_programs = gastronomy::uplc::load_programs_from_file(&file, query).await?;
+            let script_overrides = script_overrides
+                .into_iter()
+                .map(|s| ScriptOverride::parse_key(s))
+                .collect::<Result<Vec<_>, _>>()?;
+            let mut raw_programs =
+                gastronomy::uplc::load_programs_from_file(&file, query, script_overrides).await?;
             let index = index.or(if raw_programs.len() == 1 {
                 None
             } else {
