@@ -6084,8 +6084,8 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "uplc"
-version = "1.1.15"
-source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=28b534f5#28b534f56b4b5a37280539a00e6b6c51c157846a"
+version = "1.1.16"
+source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=3d23f3d7#3d23f3d726ffc20b3b0e4a70c5b50cea002b5fd4"
 dependencies = [
  "bitvec",
  "blst",
