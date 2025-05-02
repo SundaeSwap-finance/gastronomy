@@ -10,6 +10,7 @@ use figment::providers::{Env, Serialized};
 use gastronomy::{
     chain_query::ChainQuery,
     config::{Config, load_base_config},
+    uplc::ScriptOverride,
 };
 use tauri::{State, ipc::InvokeError};
 use tauri_plugin_store::StoreExt;
@@ -53,9 +54,20 @@ async fn create_traces(
         ChainQuery::None
     };
 
-    let mut programs = gastronomy::execution_trace::load_file(file, &parameters, query)
-        .await
-        .map_err(InvokeError::from_anyhow)?;
+    let script_overrides = if let Some(script_overrides) = config.script_overrides {
+        script_overrides
+            .into_iter()
+            .map(ScriptOverride::try_from)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(InvokeError::from_anyhow)?
+    } else {
+        Vec::new()
+    };
+
+    let mut programs =
+        gastronomy::execution_trace::load_file(file, &parameters, query, script_overrides)
+            .await
+            .map_err(InvokeError::from_anyhow)?;
     let mut identifiers = vec![];
     for program in programs.drain(..) {
         let trace = ExecutionTrace::from_program(program)?;

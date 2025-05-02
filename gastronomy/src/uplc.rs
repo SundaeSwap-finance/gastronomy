@@ -1,8 +1,16 @@
-use std::{collections::BTreeMap, ffi::OsStr, fs, path::Path};
+use std::{
+    collections::BTreeMap,
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result, anyhow};
 use minicbor::bytes::ByteVec;
-use pallas::ledger::primitives::conway::{Language, MintedTx};
+use pallas::ledger::primitives::{
+    ScriptHash,
+    conway::{self, Language, MintedTx},
+};
 use serde::Deserialize;
 pub use uplc::ast::Program;
 use uplc::{
@@ -14,7 +22,7 @@ use uplc::{
         indexed_term::IndexedTerm,
     },
     parser,
-    tx::tx_to_programs,
+    tx::{script_context::PlutusScript, tx_to_programs},
 };
 
 use crate::chain_query::ChainQuery;
@@ -23,6 +31,59 @@ pub struct LoadedProgram {
     pub filename: String,
     pub program: Program<NamedDeBruijn>,
     pub source_map: BTreeMap<u64, String>,
+}
+
+pub struct ScriptOverride {
+    pub from_hash: ScriptHash,
+    pub to_script: PlutusScript,
+}
+
+impl ScriptOverride {
+    pub fn parse_key(key: String) -> Result<Self> {
+        let parts: Vec<&str> = key.split(":").collect();
+
+        if parts.len() != 3 {
+            return Err(anyhow!("invalid script-override key. Expected hash:file"));
+        }
+
+        let from_hash = ScriptHash::from(hex::decode(parts[0])?.as_slice());
+
+        let file_path = PathBuf::from(parts[1]);
+        let version: usize = parts[2].to_string().parse()?;
+        let path: &Path = file_path.as_ref();
+        let absolute_path = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir()?.join(path)
+        };
+
+        Self::try_new(from_hash, absolute_path, version)
+    }
+
+    pub fn try_new(from_hash: ScriptHash, file_path: PathBuf, version: usize) -> Result<Self> {
+        let bytes = fs::read(&file_path)?;
+        let to_script = match version {
+            1 => PlutusScript::V1(minicbor::decode::<conway::PlutusScript<1>>(
+                bytes.as_slice(),
+            )?),
+            2 => PlutusScript::V2(minicbor::decode::<conway::PlutusScript<2>>(
+                bytes.as_slice(),
+            )?),
+            3 => PlutusScript::V3(minicbor::decode::<conway::PlutusScript<3>>(
+                bytes.as_slice(),
+            )?),
+            _ => {
+                return Err(anyhow!(
+                    "invalid version value. Only 1,2, and 3 are supported"
+                ));
+            }
+        };
+
+        Ok(Self {
+            from_hash,
+            to_script,
+        })
+    }
 }
 
 enum FileType {
@@ -61,7 +122,11 @@ fn load_flat(bytes: &[u8]) -> Result<Program<NamedDeBruijn>> {
     Ok(fake_named_de_bruijn.into())
 }
 
-pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<Vec<LoadedProgram>> {
+pub async fn load_programs_from_file(
+    file: &Path,
+    query: ChainQuery,
+    script_overrides: Vec<ScriptOverride>,
+) -> Result<Vec<LoadedProgram>> {
     let filename = file.display().to_string();
     match identify_file_type(file)? {
         FileType::Uplc => {
@@ -100,12 +165,12 @@ pub async fn load_programs_from_file(file: &Path, query: ChainQuery) -> Result<V
             let tx_id = hex::decode(file.to_str().unwrap())?;
             let tx_bytes = query.get_tx_bytes(tx_id[..].into()).await?;
             let multi_era_tx = MintedTx::decode_fragment(&tx_bytes).unwrap();
-            load_programs_from_tx(filename, multi_era_tx, query).await
+            load_programs_from_tx(filename, multi_era_tx, query, script_overrides).await
         }
         FileType::Transaction => {
             let bytes = std::fs::read(file)?;
             let multi_era_tx = MintedTx::decode_fragment(&bytes).unwrap();
-            load_programs_from_tx(filename, multi_era_tx, query).await
+            load_programs_from_tx(filename, multi_era_tx, query, script_overrides).await
         }
     }
 }
@@ -114,6 +179,7 @@ async fn load_programs_from_tx(
     filename: String,
     tx: MintedTx<'_>,
     query: ChainQuery,
+    script_overrides: Vec<ScriptOverride>,
 ) -> Result<Vec<LoadedProgram>> {
     println!("loading programs from tx");
     let mut inputs: Vec<_> = tx.transaction_body.inputs.iter().cloned().collect();
@@ -132,7 +198,17 @@ async fn load_programs_from_tx(
     println!("resolved inputs");
 
     let mut programs = vec![];
-    for (_, program, _) in tx_to_programs(&tx, &resolved_inputs, &slot_config).unwrap() {
+    for (_, program, _) in tx_to_programs(
+        &tx,
+        &resolved_inputs,
+        &slot_config,
+        script_overrides
+            .into_iter()
+            .map(|script_override| (script_override.from_hash, script_override.to_script))
+            .collect(),
+    )
+    .unwrap()
+    {
         programs.push(LoadedProgram {
             filename: filename.clone(),
             program: fix_names(program)?,
@@ -186,7 +262,7 @@ pub fn apply_parameters(
 
 pub fn execute_program(program: Program<NamedDeBruijn>) -> Result<Vec<(MachineState, ExBudget)>> {
     let mut machine = Machine::new(
-        Language::PlutusV2,
+        program.plutus_version()?,
         CostModel::default(),
         ExBudget::default(),
         1,
@@ -214,4 +290,22 @@ pub fn execute_program(program: Program<NamedDeBruijn>) -> Result<Vec<(MachineSt
 struct AikenExport {
     compiled_code: String,
     source_map: Option<BTreeMap<u64, String>>,
+}
+
+/**
+UTILITY LOGIC
+*/
+pub trait HasPlutusVersion {
+    fn plutus_version(&self) -> Result<Language>;
+}
+
+impl<T> HasPlutusVersion for Program<T> {
+    fn plutus_version(&self) -> Result<Language> {
+        match self.version.0 {
+            1 => Ok(Language::PlutusV1),
+            2 => Ok(Language::PlutusV2),
+            3 => Ok(Language::PlutusV3),
+            _ => Err(anyhow!("invalid language version")),
+        }
+    }
 }
