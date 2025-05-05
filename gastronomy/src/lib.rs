@@ -3,13 +3,13 @@ pub mod config;
 pub mod execution_trace;
 pub mod uplc;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf, str::FromStr};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 
 //REXPORTS
 use ::uplc::tx::script_context::PlutusScript;
-use aiken_project::watch::with_project;
+use aiken_project::blueprint::Blueprint;
 pub use execution_trace::Frame;
 pub use hex;
 pub use pallas::ledger::primitives::ScriptHash;
@@ -40,32 +40,28 @@ pub fn compute_script_overrides(
     let mut overrides: HashMap<ScriptHash, PlutusScript> = HashMap::new();
 
     if !script_overrides.is_empty() {
-        with_project(None, false, true, false, |project| {
-            let blueprint_path = project.blueprint_path(maybe_blueprint.as_deref());
-            let blueprint = project.blueprint(&blueprint_path)?;
-            let blueprint_validators: HashMap<ScriptHash, PlutusScript> = blueprint.into();
+        let blueprint_path = maybe_blueprint
+            .unwrap_or(PathBuf::from_str("plutus.json").expect("Failed to create default PathBuf"));
+        let blueprint =
+            File::open(blueprint_path).map_err(|e| anyhow!("failed to open blueprint: {}", e))?;
 
-            script_overrides
-                .iter()
-                .try_for_each::<_, Result<_, aiken_project::error::Error>>(
-                    |(from_hash, to_hash)| {
-                        overrides.insert(
-                            from_hash.clone(),
-                            blueprint_validators
-                                .get(&to_hash)
-                                .ok_or(aiken_project::error::Error::ScriptOverrideNotFound {
-                                    script_hash: to_hash.clone(),
-                                })?
-                                .clone(),
-                        );
+        let blueprint: Blueprint = serde_json::from_reader(BufReader::new(blueprint))
+            .context("failed to parse blueprint")?;
+        let blueprint_validators: HashMap<ScriptHash, PlutusScript> = blueprint.into();
 
-                        Ok(())
-                    },
-                )?;
+        script_overrides
+            .iter()
+            .try_for_each::<_, Result<_>>(|(from_hash, to_hash)| {
+                overrides.insert(
+                    from_hash.clone(),
+                    blueprint_validators
+                        .get(&to_hash)
+                        .ok_or(anyhow!("script override not found for hash: {}", to_hash))?
+                        .clone(),
+                );
 
-            Ok(())
-        })
-        .map_err(|e| anyhow!("failed to compute script overrides: {}", e))?;
+                Ok(())
+            })?;
     }
 
     Ok(overrides)

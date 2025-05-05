@@ -61,7 +61,7 @@ async fn create_traces(
                 .map(|s| ScriptOverride::try_from(s))
                 .collect::<Result<_, _>>()
                 .map_err(InvokeError::from_anyhow)?,
-            config.blueprint_path,
+            config.blueprint_file,
         )
         .map_err(InvokeError::from_anyhow)?
     } else {

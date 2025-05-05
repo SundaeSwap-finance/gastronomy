@@ -58,7 +58,7 @@ dependencies = [
 [[package]]
 name = "aiken-lang"
 version = "1.1.16"
-source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=90ec8bff#90ec8bffefac9bcfdb96d99e6225d6a3d5b148db"
+source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=3170a0e06#3170a0e06ad143945624176aafa60fcdbba09d4b"
 dependencies = [
  "blst",
  "built",
@@ -86,7 +86,7 @@ dependencies = [
 [[package]]
 name = "aiken-project"
 version = "1.1.16"
-source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=90ec8bff#90ec8bffefac9bcfdb96d99e6225d6a3d5b148db"
+source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=3170a0e06#3170a0e06ad143945624176aafa60fcdbba09d4b"
 dependencies = [
  "aiken-lang",
  "askama",
@@ -7212,7 +7212,7 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 [[package]]
 name = "uplc"
 version = "1.1.16"
-source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=90ec8bff#90ec8bffefac9bcfdb96d99e6225d6a3d5b148db"
+source = "git+https://github.com/SundaeSwap-finance/aiken.git?rev=3170a0e06#3170a0e06ad143945624176aafa60fcdbba09d4b"
 dependencies = [
  "bitvec",
  "blst",
