@@ -6,16 +6,15 @@ use std::{
 };
 
 use anyhow::Result;
+use pallas::ledger::addresses::ScriptHash;
 use serde::Serialize;
 use uplc::{
     ast::NamedDeBruijn,
     machine::{Context, MachineState, indexed_term::IndexedTerm},
+    tx::script_context::PlutusScript,
 };
 
-use crate::{
-    chain_query::ChainQuery,
-    uplc::{LoadedProgram, ScriptOverride},
-};
+use crate::{chain_query::ChainQuery, uplc::LoadedProgram};
 
 pub type Value = String;
 
@@ -51,11 +50,11 @@ pub async fn load_file(
     filename: &Path,
     parameters: &[String],
     query: ChainQuery,
-    script_overrides: Vec<ScriptOverride>,
+    script_overrides: HashMap<ScriptHash, PlutusScript>,
 ) -> Result<Vec<LoadedProgram>> {
     println!("from file");
     let raw_programs =
-        crate::uplc::load_programs_from_file(filename, query, HashMap::new()).await?;
+        crate::uplc::load_programs_from_file(filename, query, script_overrides).await?;
     let mut programs = vec![];
 
     println!("{} program(s)", raw_programs.len());

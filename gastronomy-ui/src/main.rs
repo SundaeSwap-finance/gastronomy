@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use api::{CreateTraceResponse, GetFrameResponse, GetSourceResponse, GetTraceSummaryResponse};
 use dashmap::DashMap;
@@ -9,8 +9,8 @@ use execution_trace::ExecutionTrace;
 use figment::providers::{Env, Serialized};
 use gastronomy::{
     chain_query::ChainQuery,
-    config::{Config, load_base_config},
-    uplc::ScriptOverride,
+    compute_script_overrides,
+    config::{Config, ScriptOverride, load_base_config},
 };
 use tauri::{State, ipc::InvokeError};
 use tauri_plugin_store::StoreExt;
@@ -55,13 +55,17 @@ async fn create_traces(
     };
 
     let script_overrides = if let Some(script_overrides) = config.script_overrides {
-        script_overrides
-            .into_iter()
-            .map(ScriptOverride::try_from)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(InvokeError::from_anyhow)?
+        compute_script_overrides(
+            script_overrides
+                .into_iter()
+                .map(|s| ScriptOverride::try_from(s))
+                .collect::<Result<_, _>>()
+                .map_err(InvokeError::from_anyhow)?,
+            config.blueprint_path,
+        )
+        .map_err(InvokeError::from_anyhow)?
     } else {
-        Vec::new()
+        HashMap::new()
     };
 
     let mut programs =

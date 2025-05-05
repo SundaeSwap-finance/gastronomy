@@ -42,12 +42,12 @@ export interface IBlockfrostSettings {
 }
 
 export interface IScriptOverride {
-  filePath: string;
-  fromHash: string;
-  scriptVersion: 1 | 2 | 3;
+  from: string;
+  to: string;
 }
 
 export interface ISettings {
   blockfrost?: IBlockfrostSettings;
+  blueprintFile?: string;
   scriptOverrides?: IScriptOverride[];
 }
