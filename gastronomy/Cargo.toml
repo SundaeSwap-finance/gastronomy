@@ -20,6 +20,7 @@ pallas = { version = "0.32.0", features = ["applying"] }
 reqwest = "0.12"
 serde = "1"
 serde_json = "1"
-uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "90ec8bff" }
-aiken-project = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "90ec8bff" }
+uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "3170a0e06" }
+aiken-project = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "3170a0e06" }
 # uplc = { path = "../../aiken/crates/uplc" }
+# aiken-project = { path = "../../aiken/crates/aiken-project" }

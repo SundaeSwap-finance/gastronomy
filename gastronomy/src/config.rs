@@ -9,7 +9,7 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub blockfrost: Option<BlockfrostConfig>,
-    pub blueprint_path: Option<PathBuf>,
+    pub blueprint_file: Option<PathBuf>,
     pub script_overrides: Option<Vec<ScriptOverrideConfig>>,
 }
 

@@ -30,8 +30,8 @@ enum Commands {
         index: Option<usize>,
         #[clap(long)]
         source_root: Option<PathBuf>,
-        /// A Cardano blueprint JSON file containing the overriding scripts, if applicable (defualts to plutus.json)
-        #[clap(value_name = "FILEPATH")]
+        /// A Cardano blueprint JSON file containing the overriding scripts, if applicable (defaults to plutus.json)
+        #[clap(long, value_name = "FILEPATH")]
         blueprint: Option<PathBuf>,
         /// A mapping (colon-separated) from a script hash in the transaction to the script hash of another script found in the blueprint
         /// For example:`d27cee75:197c9353`
