@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
@@ -7,9 +7,9 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use minicbor::bytes::ByteVec;
-use pallas::ledger::primitives::{
-    ScriptHash,
-    conway::{self, Language, MintedTx},
+use pallas::ledger::{
+    addresses::ScriptHash,
+    primitives::conway::{self, Language, MintedTx},
 };
 use serde::Deserialize;
 pub use uplc::ast::Program;
@@ -125,7 +125,7 @@ fn load_flat(bytes: &[u8]) -> Result<Program<NamedDeBruijn>> {
 pub async fn load_programs_from_file(
     file: &Path,
     query: ChainQuery,
-    script_overrides: Vec<ScriptOverride>,
+    script_overrides: HashMap<ScriptHash, PlutusScript>,
 ) -> Result<Vec<LoadedProgram>> {
     let filename = file.display().to_string();
     match identify_file_type(file)? {
@@ -179,7 +179,7 @@ async fn load_programs_from_tx(
     filename: String,
     tx: MintedTx<'_>,
     query: ChainQuery,
-    script_overrides: Vec<ScriptOverride>,
+    script_overrides: HashMap<ScriptHash, PlutusScript>,
 ) -> Result<Vec<LoadedProgram>> {
     println!("loading programs from tx");
     let mut inputs: Vec<_> = tx.transaction_body.inputs.iter().cloned().collect();
@@ -198,16 +198,8 @@ async fn load_programs_from_tx(
     println!("resolved inputs");
 
     let mut programs = vec![];
-    for (_, program, _) in tx_to_programs(
-        &tx,
-        &resolved_inputs,
-        &slot_config,
-        script_overrides
-            .into_iter()
-            .map(|script_override| (script_override.from_hash, script_override.to_script))
-            .collect(),
-    )
-    .unwrap()
+    for (_, program, _) in
+        tx_to_programs(&tx, &resolved_inputs, &slot_config, script_overrides).unwrap()
     {
         programs.push(LoadedProgram {
             filename: filename.clone(),

@@ -6,8 +6,9 @@ use clap::{Parser, Subcommand, command};
 use figment::providers::Env;
 use gastronomy::{
     chain_query::ChainQuery,
+    compute_script_overrides,
     config::{Config, load_base_config},
-    uplc::ScriptOverride,
+    parse_script_overrides,
 };
 
 mod app;
@@ -29,9 +30,11 @@ enum Commands {
         index: Option<usize>,
         #[clap(long)]
         source_root: Option<PathBuf>,
-        #[clap(long)]
-        /// A mapping (colon-separated) from a script hash (in the transaction) to a file containing the cbor bytes of another script and the plutus version of the script.
-        /// For example:`d27cee75:script.cbor:3`
+        /// A Cardano blueprint JSON file containing the overriding scripts, if applicable (defualts to plutus.json)
+        #[clap(value_name = "FILEPATH")]
+        blueprint: Option<PathBuf>,
+        /// A mapping (colon-separated) from a script hash in the transaction to the script hash of another script found in the blueprint
+        /// For example:`d27cee75:197c9353`
         /// *Only supported by transaction ID and transaction files*
         #[clap(long("script-override"), value_name = "FROM:TO:VERSION", num_args(0..), verbatim_doc_comment)]
         script_overrides: Vec<String>,
@@ -63,14 +66,14 @@ async fn run() -> Result<(), anyhow::Error> {
             parameters,
             index,
             source_root,
+            blueprint,
             script_overrides,
         }) => {
-            let script_overrides = script_overrides
-                .into_iter()
-                .map(|s| ScriptOverride::parse_key(s))
-                .collect::<Result<Vec<_>, _>>()?;
+            let overrides =
+                compute_script_overrides(parse_script_overrides(script_overrides)?, blueprint)?;
+
             let mut raw_programs =
-                gastronomy::uplc::load_programs_from_file(&file, query, script_overrides).await?;
+                gastronomy::uplc::load_programs_from_file(&file, query, overrides).await?;
             let index = index.or(if raw_programs.len() == 1 {
                 None
             } else {

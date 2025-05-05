@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     path::Path,
     rc::Rc,
@@ -55,7 +55,7 @@ pub async fn load_file(
 ) -> Result<Vec<LoadedProgram>> {
     println!("from file");
     let raw_programs =
-        crate::uplc::load_programs_from_file(filename, query, script_overrides).await?;
+        crate::uplc::load_programs_from_file(filename, query, HashMap::new()).await?;
     let mut programs = vec![];
 
     println!("{} program(s)", raw_programs.len());

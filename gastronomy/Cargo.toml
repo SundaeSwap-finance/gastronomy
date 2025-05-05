@@ -21,4 +21,5 @@ reqwest = "0.12"
 serde = "1"
 serde_json = "1"
 uplc = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "90ec8bff" }
+aiken-project = { git = "https://github.com/SundaeSwap-finance/aiken.git", rev = "90ec8bff" }
 # uplc = { path = "../../aiken/crates/uplc" }
