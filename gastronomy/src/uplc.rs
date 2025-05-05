@@ -2,14 +2,14 @@ use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
     fs,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use anyhow::{Context, Result, anyhow};
 use minicbor::bytes::ByteVec;
 use pallas::ledger::{
     addresses::ScriptHash,
-    primitives::conway::{self, Language, MintedTx},
+    primitives::conway::{Language, MintedTx},
 };
 use serde::Deserialize;
 pub use uplc::ast::Program;
@@ -31,59 +31,6 @@ pub struct LoadedProgram {
     pub filename: String,
     pub program: Program<NamedDeBruijn>,
     pub source_map: BTreeMap<u64, String>,
-}
-
-pub struct ScriptOverride {
-    pub from_hash: ScriptHash,
-    pub to_script: PlutusScript,
-}
-
-impl ScriptOverride {
-    pub fn parse_key(key: String) -> Result<Self> {
-        let parts: Vec<&str> = key.split(":").collect();
-
-        if parts.len() != 3 {
-            return Err(anyhow!("invalid script-override key. Expected hash:file"));
-        }
-
-        let from_hash = ScriptHash::from(hex::decode(parts[0])?.as_slice());
-
-        let file_path = PathBuf::from(parts[1]);
-        let version: usize = parts[2].to_string().parse()?;
-        let path: &Path = file_path.as_ref();
-        let absolute_path = if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            std::env::current_dir()?.join(path)
-        };
-
-        Self::try_new(from_hash, absolute_path, version)
-    }
-
-    pub fn try_new(from_hash: ScriptHash, file_path: PathBuf, version: usize) -> Result<Self> {
-        let bytes = fs::read(&file_path)?;
-        let to_script = match version {
-            1 => PlutusScript::V1(minicbor::decode::<conway::PlutusScript<1>>(
-                bytes.as_slice(),
-            )?),
-            2 => PlutusScript::V2(minicbor::decode::<conway::PlutusScript<2>>(
-                bytes.as_slice(),
-            )?),
-            3 => PlutusScript::V3(minicbor::decode::<conway::PlutusScript<3>>(
-                bytes.as_slice(),
-            )?),
-            _ => {
-                return Err(anyhow!(
-                    "invalid version value. Only 1,2, and 3 are supported"
-                ));
-            }
-        };
-
-        Ok(Self {
-            from_hash,
-            to_script,
-        })
-    }
 }
 
 enum FileType {
