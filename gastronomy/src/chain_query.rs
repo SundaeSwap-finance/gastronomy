@@ -90,9 +90,9 @@ impl Environment {
     }
     fn slot_config(&self) -> SlotConfig {
         let (zero_time, zero_slot) = match self {
-            Self::Preview => (1660003200000, 0),
+            Self::Preview => (1666656000000, 0),
             Self::Preprod => (1655683200000, 0),
-            Self::Mainnet => (1596059091000, 4492800),
+            Self::Mainnet => (1591566291000, 0),
         };
         SlotConfig {
             slot_length: 1000,
