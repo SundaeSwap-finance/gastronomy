@@ -1,6 +1,5 @@
 use std::io::{self, Stdout, stdout};
 use std::panic;
-use std::rc::Rc;
 
 use color_eyre::{config::HookBuilder, eyre};
 use crossterm::execute;
@@ -9,7 +8,7 @@ use crossterm::terminal::{
 };
 use ratatui::prelude::*;
 use uplc::machine::Context;
-use uplc::machine::value::Value;
+use uplc::machine::value::Env;
 
 pub type Tui = Terminal<CrosstermBackend<Stdout>>;
 
@@ -47,19 +46,22 @@ pub fn restore() -> io::Result<()> {
     Ok(())
 }
 
-pub fn env_to_string(env: &Rc<Vec<Value>>) -> String {
-    env.iter()
+pub fn env_to_string(env: &Env, depth: usize, filter: &Option<String>, limit: Option<usize>) -> String {
+  let entries = env.values.iter()
         .rev()
-        .enumerate()
-        .map(|(idx, v)| {
+        .filter(|(name, _)| if let Some(filter) = filter { name.text == *filter } else { true })
+        .map(|(name, v)| {
             format!(
                 "{}: {}",
-                format!("i_{}", idx + 1).blue(),
-                uplc::machine::discharge::value_as_term(v.clone())
+                name.text.to_string().blue(),
+                uplc::machine::discharge::value_as_term(v.clone()).to_pretty(depth)
             )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+        });
+  if let Some(l) = limit {
+    entries.take(l).collect::<Vec<_>>().join("\n")
+  } else {
+    entries.collect::<Vec<_>>().join("\n")
+  }
 }
 
 pub fn context_to_string(context: Context) -> String {

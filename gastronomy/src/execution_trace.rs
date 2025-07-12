@@ -2,7 +2,6 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     path::Path,
-    rc::Rc,
 };
 
 use anyhow::Result;
@@ -10,7 +9,7 @@ use pallas::ledger::addresses::ScriptHash;
 use serde::Serialize;
 use uplc::{
     ast::NamedDeBruijn,
-    machine::{Context, MachineState, indexed_term::IndexedTerm},
+    machine::{indexed_term::IndexedTerm, value::Env, Context, MachineState},
     tx::script_context::PlutusScript,
 };
 
@@ -74,7 +73,7 @@ pub async fn load_file(
 pub struct RawFrame<'a> {
     pub label: &'a str,
     pub context: &'a Context,
-    pub env: &'a Rc<Vec<uplc::machine::value::Value>>,
+    pub env: Env,
     pub term: &'a IndexedTerm<NamedDeBruijn>,
     pub ret_value: Option<&'a uplc::machine::value::Value>,
     pub location: Option<&'a String>,
@@ -98,7 +97,7 @@ pub fn parse_raw_frames<'a>(
                 (
                     "Compute",
                     context,
-                    env,
+                    env.clone(),
                     term,
                     term.index()
                         .and_then(|i| source_map.get(&i))
@@ -112,7 +111,7 @@ pub fn parse_raw_frames<'a>(
                 (
                     "Done",
                     prev_frame.context,
-                    prev_frame.env,
+                    prev_frame.env.clone(),
                     term,
                     term.index()
                         .and_then(|i| source_map.get(&i))
@@ -126,7 +125,7 @@ pub fn parse_raw_frames<'a>(
                 (
                     "Return",
                     context,
-                    prev_frame.env,
+                    prev_frame.env.clone(),
                     prev_frame.term,
                     prev_frame.location,
                     Some(value),

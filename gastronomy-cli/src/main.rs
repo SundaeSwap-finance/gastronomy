@@ -114,6 +114,8 @@ async fn run() -> Result<(), anyhow::Error> {
                 source_files,
                 source_token_indices,
                 exit: false,
+                env_depth: 10,
+                ret_depth: 10,
                 ..Default::default()
             };
             let app_result = app.run(&mut terminal);

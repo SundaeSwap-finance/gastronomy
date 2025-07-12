@@ -15,7 +15,7 @@ use ratatui::{
 use uplc::ast::NamedDeBruijn;
 use uplc::machine::Context;
 use uplc::machine::indexed_term::IndexedTerm;
-use uplc::machine::value::Value;
+use uplc::machine::value::{Env, Value};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Focus {
@@ -54,6 +54,10 @@ pub struct App<'a> {
     pub context_scroll: u16,
     pub env_scroll: u16,
     pub return_scroll: u16,
+
+    pub env_filter: Option<String>,
+    pub env_depth: usize,
+    pub ret_depth: usize,
 }
 
 impl App<'_> {
@@ -75,117 +79,154 @@ impl App<'_> {
             // it's important to check that the event is a key press event as
             // crossterm also emits key release and repeat events on Windows.
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                match key_event.code {
-                    KeyCode::Char('q') => {
-                        self.exit = true;
+                if self.focus == Focus::Env && let Some(filter) = self.env_filter.clone() {
+                    match key_event.code {
+                      KeyCode::Esc => {
+                        self.env_filter = None;
+                      }
+                      KeyCode::Char(c) if c.is_digit(10) => {
+                        self.env_filter = Some(filter + &c.to_string())
+                      }
+                      KeyCode::Char('C') | KeyCode::Char('c') => {
+                          let curr_frame = &self.frames[self.cursor];
+                          let text = utils::env_to_string(&curr_frame.env, 10000, &self.env_filter, None);
+                          if let Err(e) = terminal_clipboard::set_string(text) {
+                              eprintln!("Could not copy to clipboard: {e}");
+                          };
+                      }
+                      KeyCode::Left => {
+                        self.env_depth = if self.env_depth == 0 { 0 } else { self.env_depth - 1 };
+                      }
+                      KeyCode::Right => {
+                        self.env_depth += 1;
+                      }
+                      KeyCode::Backspace => {
+                        let mut take = filter.to_string();
+                        if take.len() > 2 {
+                          take.pop();
+                        }
+                        self.env_filter = Some(take)
+                      }
+                      _ => {}
                     }
-                    KeyCode::Char('e') | KeyCode::Char('E') => {
-                        if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
+                } else {
+                    match key_event.code {
+                        KeyCode::Char('q') => {
+                            self.exit = true;
+                        }
+                        KeyCode::Char('e') | KeyCode::Char('E') => {
+                            if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
+                                if self.view_source {
+                                    self.cursor = self
+                                        .source_token_indices
+                                        .iter()
+                                        .last()
+                                        .copied()
+                                        .unwrap_or(self.frames.len() - 1);
+                                } else {
+                                    self.cursor = self.frames.len() - 1;
+                                }
+                            }
+                        }
+                        KeyCode::Char('N') | KeyCode::Char('n') | KeyCode::Right => {
                             if self.view_source {
                                 self.cursor = self
                                     .source_token_indices
                                     .iter()
-                                    .last()
+                                    .find(|i| **i > self.cursor)
                                     .copied()
                                     .unwrap_or(self.frames.len() - 1);
                             } else {
-                                self.cursor = self.frames.len() - 1;
-                            }
-                        }
-                    }
-                    KeyCode::Char('N') | KeyCode::Char('n') | KeyCode::Right => {
-                        if self.view_source {
-                            self.cursor = self
-                                .source_token_indices
-                                .iter()
-                                .find(|i| **i > self.cursor)
-                                .copied()
-                                .unwrap_or(self.frames.len() - 1);
-                        } else {
-                            let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
-                            {
-                                50
-                            } else {
-                                1
-                            };
-                            let next = self.cursor + stride;
-                            self.cursor = if next < self.frames.len() {
-                                next
-                            } else {
-                                self.frames.len() - 1
-                            };
-                        };
-                    }
-                    KeyCode::Char('P') | KeyCode::Char('p') | KeyCode::Left => {
-                        if self.view_source {
-                            self.cursor = self
-                                .source_token_indices
-                                .iter()
-                                .rev()
-                                .find(|i| **i < self.cursor)
-                                .copied()
-                                .unwrap_or(0);
-                        } else {
-                            let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
-                            {
-                                50
-                            } else {
-                                1
-                            };
-                            self.cursor = self.cursor.saturating_sub(stride);
-                        }
-                    }
-                    KeyCode::Char('C') | KeyCode::Char('c') => {
-                        let curr_frame = &self.frames[self.cursor];
-                        let text = match self.focus {
-                            Focus::Term => {
-                                let term_text = curr_frame.term.to_string();
-                                if self.view_source {
-                                    curr_frame
-                                        .location
-                                        .map(|loc| {
-                                            let (file, _, _) = parse_location(loc);
-                                            self.source_files
-                                                .get(file)
-                                                .map(|c| c.as_str())
-                                                .unwrap_or("File not found")
-                                                .to_string()
-                                        })
-                                        .unwrap_or(term_text)
+                                let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
+                                {
+                                    500
                                 } else {
-                                    term_text
-                                }
+                                    1
+                                };
+                                let next = self.cursor + stride;
+                                self.cursor = if next < self.frames.len() {
+                                    next
+                                } else {
+                                    self.frames.len() - 1
+                                };
+                            };
+                        }
+                        KeyCode::Char('P') | KeyCode::Char('p') | KeyCode::Left => {
+                            if self.view_source {
+                                self.cursor = self
+                                    .source_token_indices
+                                    .iter()
+                                    .rev()
+                                    .find(|i| **i < self.cursor)
+                                    .copied()
+                                    .unwrap_or(0);
+                            } else {
+                                let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
+                                {
+                                    50
+                                } else {
+                                    1
+                                };
+                                self.cursor = self.cursor.saturating_sub(stride);
                             }
-                            Focus::Context => utils::context_to_string(curr_frame.context.clone()),
-                            Focus::Env => utils::env_to_string(curr_frame.env),
-                        };
-                        if let Err(e) = terminal_clipboard::set_string(text) {
-                            eprintln!("Could not copy to clipboard: {e}");
-                        };
-                    }
-                    KeyCode::Char('v') => {
-                        self.view_source = !self.view_source;
-                    }
-                    KeyCode::Tab => match self.focus {
-                        Focus::Term => self.focus = Focus::Context,
-                        Focus::Context => self.focus = Focus::Env,
-                        Focus::Env => self.focus = Focus::Term,
-                    },
-                    KeyCode::Up => match self.focus {
-                        Focus::Term => self.term_scroll = self.term_scroll.saturating_sub(1),
-                        Focus::Context => {
-                            self.context_scroll = self.context_scroll.saturating_sub(1)
                         }
-                        Focus::Env => self.env_scroll = self.env_scroll.saturating_sub(1),
-                    },
-                    KeyCode::Down => match self.focus {
-                        Focus::Term => self.term_scroll = self.term_scroll.saturating_add(1),
-                        Focus::Context => {
-                            self.context_scroll = self.context_scroll.saturating_add(1)
+                        KeyCode::Char('C') | KeyCode::Char('c') => {
+                            let curr_frame = &self.frames[self.cursor];
+                            let text = match self.focus {
+                                Focus::Term => {
+                                    let term_text = curr_frame.term.to_string();
+                                    if self.view_source {
+                                        curr_frame
+                                            .location
+                                            .map(|loc| {
+                                                let (file, _, _) = parse_location(loc);
+                                                self.source_files
+                                                    .get(file)
+                                                    .map(|c| c.as_str())
+                                                    .unwrap_or("File not found")
+                                                    .to_string()
+                                            })
+                                            .unwrap_or(term_text)
+                                    } else {
+                                        term_text
+                                    }
+                                }
+                                Focus::Context => utils::context_to_string(curr_frame.context.clone()),
+                                Focus::Env => utils::env_to_string(&curr_frame.env, 10000, &self.env_filter, None),
+                            };
+                            if let Err(e) = terminal_clipboard::set_string(text) {
+                                eprintln!("Could not copy to clipboard: {e}");
+                            };
                         }
-                        Focus::Env => self.env_scroll = self.env_scroll.saturating_add(1),
-                    },
-                    _ => {}
+                        KeyCode::Char('v') => {
+                            self.view_source = !self.view_source;
+                        }
+                        KeyCode::Char('i') => {
+                          if self.focus == Focus::Env {
+                            self.env_filter = Some("i_".to_string());
+                          }
+                        }
+                        KeyCode::Tab => match self.focus {
+                            Focus::Term => self.focus = Focus::Context,
+                            Focus::Context => self.focus = Focus::Env,
+                            Focus::Env => self.focus = Focus::Term,
+                        },
+                        KeyCode::Up => match self.focus {
+                            Focus::Term => self.term_scroll = self.term_scroll.saturating_sub(1),
+                            Focus::Context => {
+                                self.context_scroll = self.context_scroll.saturating_sub(1)
+                            }
+                            Focus::Env => self.env_scroll = self.env_scroll.saturating_sub(1),
+                        },
+                        KeyCode::Down => match self.focus {
+                            Focus::Term => self.term_scroll = self.term_scroll.saturating_add(1),
+                            Focus::Context => {
+                                self.context_scroll = self.context_scroll.saturating_add(1)
+                            }
+                            Focus::Env => self.env_scroll = self.env_scroll.saturating_add(1),
+                        },
+                        _ => {}
+                    }
                 }
             }
             _ => {}
@@ -199,7 +240,7 @@ impl Widget for &mut App<'_> {
         let curr_frame = &self.frames[self.cursor];
         let label = curr_frame.label;
         let context = curr_frame.context;
-        let env = curr_frame.env;
+        let env = &curr_frame.env;
         let term = curr_frame.term;
         let location = curr_frame.location;
         let ret_value = curr_frame.ret_value;
@@ -249,8 +290,8 @@ impl Widget for &mut App<'_> {
             self.context_scroll,
             buf,
         );
-        render_env_region(env, self.focus, self.env_scroll, env_region, buf);
-        render_clear_popup_region(area, ret_value, buf);
+        render_env_region(&env, self.env_depth, self.focus, &self.env_filter, self.env_scroll, env_region, buf);
+        render_clear_popup_region(area, ret_value, self.ret_depth, buf);
     }
 }
 
@@ -413,7 +454,7 @@ fn render_term_region(
             term_text = pad_lines_with_spaces(old_term_text, term_region.width as usize);
             highlight_text(&term_text, line, column)
         } else {
-            term_text = term.to_string();
+            term_text = term.to_pretty(100);
             split_text(&term_text)
         };
 
@@ -437,7 +478,7 @@ fn render_term_region(
             .render(term_region, buf);
         render_source_region(location, source_region, buf);
     } else {
-        let term_text = term.to_string();
+        let term_text = term.to_pretty(100);
         let max_term_scroll = term_text.lines().count() as u16 - 1;
         if term_scroll > max_term_scroll {
             term_scroll = max_term_scroll;
@@ -494,8 +535,10 @@ fn render_context_region(
 }
 
 fn render_env_region(
-    env: &Rc<Vec<uplc::machine::value::Value>>,
+    env: &Env,
+    depth: usize,
     focus: Focus,
+    filter: &Option<String>,
     mut env_scroll: u16,
     env_region: Rect,
     buf: &mut Buffer,
@@ -506,8 +549,9 @@ fn render_env_region(
         bottom_left: symbols::line::NORMAL.horizontal_up,
         ..symbols::border::PLAIN
     };
+    let title = if let Some(f) = filter { format!(" Env ({}) ({} terms) ", f, env.len()) } else { format!(" Env ({} terms)", env.len()) };
     let env_block = Block::default()
-        .title(" Env ".fg(if focus == Focus::Env {
+        .title(title.fg(if focus == Focus::Env {
             Color::Blue
         } else {
             Color::Reset
@@ -515,7 +559,7 @@ fn render_env_region(
         .borders(Borders::ALL)
         .border_set(collapsed_top_and_left_border_set);
 
-    let env_text = utils::env_to_string(env);
+    let env_text = utils::env_to_string(env, depth, &filter, Some(env_region.height.into()));
     let line_count = env_text.lines().count() as u16;
     let max_env_scroll = if line_count == 0 {
         line_count
@@ -532,7 +576,7 @@ fn render_env_region(
         .render(env_region, buf);
 }
 
-fn render_clear_popup_region(area: Rect, ret_value: Option<&Value>, buf: &mut Buffer) {
+fn render_clear_popup_region(area: Rect, ret_value: Option<&Value>, depth: usize, buf: &mut Buffer) {
     if let Some(value) = ret_value {
         let ret_block = Block::default()
             .title(" Return Value ")
@@ -546,7 +590,7 @@ fn render_clear_popup_region(area: Rect, ret_value: Option<&Value>, buf: &mut Bu
             height: area.height / 3,
         };
         Clear.render(popup_area, buf);
-        Paragraph::new(uplc::machine::discharge::value_as_term(value.clone()).to_string())
+        Paragraph::new(uplc::machine::discharge::value_as_term(value.clone()).to_pretty(depth))
             .block(ret_block)
             .render(popup_area, buf);
     }
