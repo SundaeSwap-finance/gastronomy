@@ -9,7 +9,7 @@ use pallas::ledger::addresses::ScriptHash;
 use serde::Serialize;
 use uplc::{
     ast::NamedDeBruijn,
-    machine::{indexed_term::IndexedTerm, value::Env, Context, MachineState},
+    machine::{Context, MachineState, indexed_term::IndexedTerm, value::Env},
     tx::script_context::PlutusScript,
 };
 
