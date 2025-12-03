@@ -177,17 +177,13 @@ fn parse_context_frame(context: &Context) -> (String, Option<&Context>) {
     }
 }
 
-pub fn parse_env(env: &[uplc::machine::value::Value]) -> Vec<EnvVar> {
-    env.iter()
+pub fn parse_env(env: &uplc::machine::value::Env) -> Vec<EnvVar> {
+    env.values
+        .iter()
         .rev()
-        .enumerate()
-        .map(|(idx, v)| {
-            let name = format!("i_{}", idx + 1);
-            let value = parse_uplc_value(v.clone());
-            EnvVar {
-                name,
-                value: value.to_string(),
-            }
+        .map(|(name, v)| EnvVar {
+            name: name.text.clone(),
+            value: parse_uplc_value(v.clone()).to_string(),
         })
         .collect()
 }
