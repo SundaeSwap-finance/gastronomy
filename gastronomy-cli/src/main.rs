@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, path::PathBuf};
 
 use anyhow::{Result, bail};
 use app::App;
-use clap::{Parser, Subcommand, command};
+use clap::{Parser, Subcommand};
 use figment::providers::Env;
 use gastronomy::{
     chain_query::ChainQuery,

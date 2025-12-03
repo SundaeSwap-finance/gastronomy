@@ -46,10 +46,23 @@ pub fn restore() -> io::Result<()> {
     Ok(())
 }
 
-pub fn env_to_string(env: &Env, depth: usize, filter: &Option<String>, limit: Option<usize>) -> String {
-  let entries = env.values.iter()
+pub fn env_to_string(
+    env: &Env,
+    depth: usize,
+    filter: &Option<String>,
+    limit: Option<usize>,
+) -> String {
+    let entries = env
+        .values
+        .iter()
         .rev()
-        .filter(|(name, _)| if let Some(filter) = filter { name.text == *filter } else { true })
+        .filter(|(name, _)| {
+            if let Some(filter) = filter {
+                name.text == *filter
+            } else {
+                true
+            }
+        })
         .map(|(name, v)| {
             format!(
                 "{}: {}",
@@ -57,11 +70,11 @@ pub fn env_to_string(env: &Env, depth: usize, filter: &Option<String>, limit: Op
                 uplc::machine::discharge::value_as_term(v.clone()).to_pretty(depth)
             )
         });
-  if let Some(l) = limit {
-    entries.take(l).collect::<Vec<_>>().join("\n")
-  } else {
-    entries.collect::<Vec<_>>().join("\n")
-  }
+    if let Some(l) = limit {
+        entries.take(l).collect::<Vec<_>>().join("\n")
+    } else {
+        entries.collect::<Vec<_>>().join("\n")
+    }
 }
 
 pub fn context_to_string(context: Context) -> String {

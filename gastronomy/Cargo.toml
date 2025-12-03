@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 blockfrost = "1.0.3"
+blockfrost-openapi = "0.1.83"
 figment = { version = "0.10", features = ["toml"] }
 futures = "0.3.31"
 hex = "0.4"

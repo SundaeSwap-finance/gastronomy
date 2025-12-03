@@ -79,35 +79,46 @@ impl App<'_> {
             // it's important to check that the event is a key press event as
             // crossterm also emits key release and repeat events on Windows.
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                if self.focus == Focus::Env && let Some(filter) = self.env_filter.clone() {
+                if self.focus == Focus::Env
+                    && let Some(filter) = self.env_filter.clone()
+                {
                     match key_event.code {
-                      KeyCode::Esc => {
-                        self.env_filter = None;
-                      }
-                      KeyCode::Char(c) if c.is_digit(10) => {
-                        self.env_filter = Some(filter + &c.to_string())
-                      }
-                      KeyCode::Char('C') | KeyCode::Char('c') => {
-                          let curr_frame = &self.frames[self.cursor];
-                          let text = utils::env_to_string(&curr_frame.env, 10000, &self.env_filter, None);
-                          if let Err(e) = terminal_clipboard::set_string(text) {
-                              eprintln!("Could not copy to clipboard: {e}");
-                          };
-                      }
-                      KeyCode::Left => {
-                        self.env_depth = if self.env_depth == 0 { 0 } else { self.env_depth - 1 };
-                      }
-                      KeyCode::Right => {
-                        self.env_depth += 1;
-                      }
-                      KeyCode::Backspace => {
-                        let mut take = filter.to_string();
-                        if take.len() > 2 {
-                          take.pop();
+                        KeyCode::Esc => {
+                            self.env_filter = None;
                         }
-                        self.env_filter = Some(take)
-                      }
-                      _ => {}
+                        KeyCode::Char(c) if c.is_digit(10) => {
+                            self.env_filter = Some(filter + &c.to_string())
+                        }
+                        KeyCode::Char('C') | KeyCode::Char('c') => {
+                            let curr_frame = &self.frames[self.cursor];
+                            let text = utils::env_to_string(
+                                &curr_frame.env,
+                                10000,
+                                &self.env_filter,
+                                None,
+                            );
+                            if let Err(e) = terminal_clipboard::set_string(text) {
+                                eprintln!("Could not copy to clipboard: {e}");
+                            };
+                        }
+                        KeyCode::Left => {
+                            self.env_depth = if self.env_depth == 0 {
+                                0
+                            } else {
+                                self.env_depth - 1
+                            };
+                        }
+                        KeyCode::Right => {
+                            self.env_depth += 1;
+                        }
+                        KeyCode::Backspace => {
+                            let mut take = filter.to_string();
+                            if take.len() > 2 {
+                                take.pop();
+                            }
+                            self.env_filter = Some(take)
+                        }
+                        _ => {}
                     }
                 } else {
                     match key_event.code {
@@ -137,12 +148,12 @@ impl App<'_> {
                                     .copied()
                                     .unwrap_or(self.frames.len() - 1);
                             } else {
-                                let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
-                                {
-                                    500
-                                } else {
-                                    1
-                                };
+                                let stride =
+                                    if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
+                                        500
+                                    } else {
+                                        1
+                                    };
                                 let next = self.cursor + stride;
                                 self.cursor = if next < self.frames.len() {
                                     next
@@ -161,12 +172,12 @@ impl App<'_> {
                                     .copied()
                                     .unwrap_or(0);
                             } else {
-                                let stride = if key_event.modifiers.contains(event::KeyModifiers::SHIFT)
-                                {
-                                    50
-                                } else {
-                                    1
-                                };
+                                let stride =
+                                    if key_event.modifiers.contains(event::KeyModifiers::SHIFT) {
+                                        50
+                                    } else {
+                                        1
+                                    };
                                 self.cursor = self.cursor.saturating_sub(stride);
                             }
                         }
@@ -191,8 +202,15 @@ impl App<'_> {
                                         term_text
                                     }
                                 }
-                                Focus::Context => utils::context_to_string(curr_frame.context.clone()),
-                                Focus::Env => utils::env_to_string(&curr_frame.env, 10000, &self.env_filter, None),
+                                Focus::Context => {
+                                    utils::context_to_string(curr_frame.context.clone())
+                                }
+                                Focus::Env => utils::env_to_string(
+                                    &curr_frame.env,
+                                    10000,
+                                    &self.env_filter,
+                                    None,
+                                ),
                             };
                             if let Err(e) = terminal_clipboard::set_string(text) {
                                 eprintln!("Could not copy to clipboard: {e}");
@@ -202,9 +220,9 @@ impl App<'_> {
                             self.view_source = !self.view_source;
                         }
                         KeyCode::Char('i') => {
-                          if self.focus == Focus::Env {
-                            self.env_filter = Some("i_".to_string());
-                          }
+                            if self.focus == Focus::Env {
+                                self.env_filter = Some("i_".to_string());
+                            }
                         }
                         KeyCode::Tab => match self.focus {
                             Focus::Term => self.focus = Focus::Context,
@@ -290,7 +308,15 @@ impl Widget for &mut App<'_> {
             self.context_scroll,
             buf,
         );
-        render_env_region(&env, self.env_depth, self.focus, &self.env_filter, self.env_scroll, env_region, buf);
+        render_env_region(
+            &env,
+            self.env_depth,
+            self.focus,
+            &self.env_filter,
+            self.env_scroll,
+            env_region,
+            buf,
+        );
         render_clear_popup_region(area, ret_value, self.ret_depth, buf);
     }
 }
@@ -549,7 +575,11 @@ fn render_env_region(
         bottom_left: symbols::line::NORMAL.horizontal_up,
         ..symbols::border::PLAIN
     };
-    let title = if let Some(f) = filter { format!(" Env ({}) ({} terms) ", f, env.len()) } else { format!(" Env ({} terms)", env.len()) };
+    let title = if let Some(f) = filter {
+        format!(" Env ({}) ({} terms) ", f, env.len())
+    } else {
+        format!(" Env ({} terms)", env.len())
+    };
     let env_block = Block::default()
         .title(title.fg(if focus == Focus::Env {
             Color::Blue
@@ -576,7 +606,12 @@ fn render_env_region(
         .render(env_region, buf);
 }
 
-fn render_clear_popup_region(area: Rect, ret_value: Option<&Value>, depth: usize, buf: &mut Buffer) {
+fn render_clear_popup_region(
+    area: Rect,
+    ret_value: Option<&Value>,
+    depth: usize,
+    buf: &mut Buffer,
+) {
     if let Some(value) = ret_value {
         let ret_block = Block::default()
             .title(" Return Value ")

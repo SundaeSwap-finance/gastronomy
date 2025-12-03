@@ -1,5 +1,6 @@
 use anyhow::{Result, bail};
 use blockfrost::{BlockfrostAPI, JsonValue};
+use blockfrost_openapi::models::script::Type;
 use pallas::{
     applying::utils::{AlonzoError, ValidationError, add_values},
     codec::utils::{Bytes, CborWrap, NonEmptyKeyValuePairs, PositiveCoin},
@@ -204,14 +205,28 @@ impl ChainQueryImpl for Blockfrost {
             };
 
             let script_ref = if let Some(script_hash) = output.reference_script_hash {
+                let script_version = self.api.scripts_by_id(script_hash.as_str()).await?.r#type;
                 let script = self
                     .api
                     .scripts_datum_hash_cbor(script_hash.as_str())
                     .await?;
                 let bytes = hex::decode(script["cbor"].as_str().unwrap()).unwrap();
-                Some(CborWrap(PseudoScript::PlutusV2Script(
-                    conway::PlutusScript(bytes.into()),
-                )))
+                let script = match script_version {
+                    Type::PlutusV1 => {
+                        PseudoScript::PlutusV1Script(conway::PlutusScript(bytes.into()))
+                    }
+                    Type::PlutusV2 => {
+                        PseudoScript::PlutusV2Script(conway::PlutusScript(bytes.into()))
+                    }
+                    Type::PlutusV3 => {
+                        PseudoScript::PlutusV3Script(conway::PlutusScript(bytes.into()))
+                    }
+                    Type::Timelock => {
+                        unreachable!("native script cannot be a used referenced in a script_ref")
+                    }
+                };
+
+                Some(CborWrap(script))
             } else {
                 None
             };

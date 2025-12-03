@@ -131,7 +131,7 @@ impl ExecutionTraceWorker {
         let frame = Frame {
             label: raw.label.to_string(),
             context: parse_context(raw.context),
-            env: parse_env(raw.env),
+            env: parse_env(&raw.env),
             term: raw.term.to_string(),
             ret_value: raw.ret_value.map(|v| parse_uplc_value(v.clone())),
             location: raw.location.cloned(),
